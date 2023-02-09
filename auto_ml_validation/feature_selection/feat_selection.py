@@ -113,7 +113,8 @@ class AutoFeatSelection(BaseEstimator):
         """
         self._verbose_print('Beginning Greedy Feature Selection Method.')
         
-        
+        scoring_method = 'accuracy'
+
         #Possible Scoring : accuracy, f1, precision, recall, roc_auc
         def _forward_selected_feature(X, y):
             clf = RandomForestClassifier(n_estimators=100, n_jobs=-1)
@@ -122,7 +123,7 @@ class AutoFeatSelection(BaseEstimator):
                        forward=True,
                        floating=False,
                        verbose=2,
-                       scoring='accuracy',
+                       scoring=scoring_method,
                        cv=5)
             sfs1 = sfs1.fit(X, y)
             feats_selected = list(sfs1.k_feature_names_)
@@ -136,7 +137,7 @@ class AutoFeatSelection(BaseEstimator):
                        forward=False,
                        floating=False,
                        verbose=2,
-                       scoring='accuracy',
+                       scoring=scoring_method,
                        cv=5)
             sfs1 = sfs1.fit(X, y)
             feats_selected = list(sfs1.k_feature_names_)
@@ -148,7 +149,7 @@ class AutoFeatSelection(BaseEstimator):
             efs1 = EFS(clf, 
                        min_features=1,
                        max_features=len(X.columns),
-                       scoring='accuracy',
+                       scoring=scoring_method,
                        cv=3)
             
             efs1 = efs1.fit(X, y)
