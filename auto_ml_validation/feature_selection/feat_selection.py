@@ -1,20 +1,15 @@
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator
-from sklearn.feature_selection import SelectFromModel, RFECV
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.feature_selection import SelectFromModel, RFECV, VarianceThreshold, SelectKBest, mutual_info_regression
 from sklearn.ensemble import RandomForestClassifier
-from typing_extensions import (Literal)
-from typing import Optional, List, Union
+from sklearn.linear_model import LassoCV, LogisticRegression
+from sklearn.model_selection import StratifiedKFold
+from typing import Optional, List, Union, Literal
 
 #Add
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
-
-#Filter
-from sklearn.feature_selection import VarianceThreshold
-from sklearn.feature_selection import SelectKBest, mutual_info_regression
-
 
 
 class AutoFeatSelection(BaseEstimator):
@@ -34,9 +29,9 @@ class AutoFeatSelection(BaseEstimator):
             - keep: list of features that should be kept, this is useful to keep business context features (requirements)
             - method: str, "filter": This refers to statistic/data-based method e.g. Correlation/Statistical Test (Information Gain, Fisher Score)
                             "greedy": This refers to wrapper methods, forward selection/backward elimination/exhaustive feature selection.
-                            "intrisic": This refers to algorithms such as Random Forest that perform automatic feature selection and Recursive methods. This includes Embedded Methods
+                            "intrinsic": This refers to algorithms such as Random Forest that perform automatic feature selection and Recursive methods. This includes Embedded Methods
                             "auto": Use a combination of above.
-                            (default: "all")
+                            (default: "auto")
             - verbose: verbosity level (int; default: 1)
         Attributes:
             - feats_selected_: list of good features (to select via pandas DataFrame columns)
@@ -59,49 +54,90 @@ class AutoFeatSelection(BaseEstimator):
         return True
         
     def generate_best_feats(self, predictors: pd.DataFrame, target) -> pd.DataFrame:
+        """
+        Selects best predictive features given the data and targets.
+        Inputs:
+            - predictors: pandas DataFrame with n data points and p features
+            - target: n dimensional array with targets corresponding to the data points in df
+        Returns:
+            - feats_selected_: list of column names selected
+            - num_features: count of column names selected
+        """
+        feats_selected_, num_features = [], 0
+        if self.keep is None:
+            self.keep = []
+            
+        predictors_original = predictors.copy(deep = True)
+        predictors = predictors.drop(self.keep, axis = 1)
+        
+        # Data Check
         if predictors.shape[0] <= 1:
             raise ValueError("Number of samples too small, n_samples = {}".format(predictors.shape[0]))
-        if self.method == 'intrisic':
-            feats_selected_, num_features = feature_select_instrisic(predictors, target)
+        if not (len(predictors) == len(target)):
+            raise ValueError("Predictors dataframe and target dimension mismatch.")
+        if not all(np.issubdtype(predictors[col].dtype, np.number) for col in predictors.columns):
+            raise TypeError("Object data found. Data needs to be processed to float or integer.")
+        if any(predictors[col].nunique() == len(predictors) for col in predictors.columns):
+            raise ValueError("Unique Identifier found in dataset.")
+        
+        if self.method == 'intrinsic':
+            feats_selected_, num_features = self._feature_select_intrinsic(predictors, target)
         elif self.method == 'greedy':
             feats_selected_, num_features = self._feature_select_greedy(predictors, target)
         elif self.method == 'filter':
              feats_selected_, num_features = self._feature_select_filter(predictors, target)
-             
-        return feats_selected_, num_features
+        else: # auto
+            if predictors.shape[1] > 20: # If more than 20, use intrinsic technique 
+                feats_selected_, num_features = self._feature_select_intrinsic(predictors, target)
+            else: # If less than 20, use greedy technique
+                feats_selected_, num_features = self._feature_select_greedy(predictors, target) 
+                
+        if not self.keep:
+            return feats_selected_, num_features
+        else:
+            return feats_selected_ + self.keep, len(feats_selected_ + self.keep)
+
 
     
     #########################################################################################################
     # Feature Selection Methods Implementation
     #########################################################################################################
-    def _feature_select_instrisic(X: pd.DataFrame, y):
+    def _feature_select_intrinsic(self, X: pd.DataFrame, y):
         """
-        Intrisic methods for feature selection
+        Intrinsic methods for feature selection
         Inputs:
             - X: pandas dataframe or numpy array with original features
             - y: pandas dataframe or numpy array with targets for all n_datapoints
         """
-        _verbose_print('Beginning Instrisic Feature Selection Method.')
+        self._verbose_print('Beginning Intrinsic Feature Selection Method.')
         feats_selected_, num_features = [], 0
         
-        
-        def _dt_selected_features(X, y):
-            clf = DecisionTreeClassifier()
-            trans = SelectFromModel(clf, threshold='median')
-            X_trans = trans.fit_transform(X, y)
-            feats_selected_ = X.iloc[:,1:].columns[trans.get_support()].values
-            return feats_selected_, X_trans.shape[1]
-        
-        def _rfecv_selected_features(X, y, cross_val = 5):
-            rfc = RandomForestClassifier(max_depth=8, random_state=0)
-            clf = RFECV(rfc, step = 1, cv = cross_val)
-            clf.fit(X, y)
-            feats_selected_ = X.columns[clf.support_]
-            num_features = clf.n_features_
+        def _lasso_selected_feature(X, y):
+            skf = StratifiedKFold(n_splits=10)
+            lasso = LassoCV(cv=skf, random_state=42).fit(X, y)
+            feats_selected_ = list(X.columns[np.where(lasso.coef_!=0)[0]])
+            num_features = len(feats_selected_)
             return feats_selected_, num_features
-            
-    
-        feats_selected_, num_features = _dt_selected_features(X, y)
+        
+        def _log_reg_coefficients(X, y):
+            sel_ = SelectFromModel(LogisticRegression(C=1000, penalty='l2', max_iter=500, random_state=10))
+            sel_.fit(X, y)
+            feats_selected_ = X.columns[(sel_.get_support())]
+            num_features = len(feats_selected_)
+            return feats_selected_, num_features
+
+        def _rf_selected_features(X, y):
+            hyper = {'min_samples_leaf':80, 'max_features':0.5, 'max_depth':15}
+            sel_ = SelectFromModel(RandomForestClassifier(n_estimators=50, min_samples_leaf=hyper['min_samples_leaf'],
+                                 max_features=hyper['max_features'],
+                                 max_depth=hyper['max_depth'],
+                                 oob_score=True,
+                                 n_jobs=-1))
+            sel_.fit(X, y)
+            feats_selected_ = X.columns[(sel_.get_support())]
+            return feats_selected_, len(feats_selected_)
+        
+        feats_selected_, num_features = _rf_selected_features(X, y)
         return feats_selected_, num_features
             
     def _feature_select_greedy(self, X: pd.DataFrame, y):
@@ -157,6 +193,13 @@ class AutoFeatSelection(BaseEstimator):
             self._verbose_print(efs1.best_score_)
             return feats_selected, len(feats_selected)
         
+        def _rfecv_selected_features(X, y, cross_val = 5):
+            rfc = RandomForestClassifier(max_depth=8, random_state=0)
+            clf = RFECV(rfc, step = 1, cv = cross_val)
+            clf.fit(X, y)
+            feats_selected_ = X.columns[clf.support_]
+            num_features = clf.n_features_
+            return feats_selected_, num_features
         
         return _forward_selected_feature(X, y)
         #return _backward_selected_feature(X, y)
@@ -193,9 +236,18 @@ class AutoFeatSelection(BaseEstimator):
             return feats_selected, len(feats_selected)
         
         return _common_filter(X, y)
-
-        
         
     @property
     def n_features(self):
         return len(self.feats_selected_)
+    
+    
+if __name__ == "__main__":
+    data = pd.read_csv('data/stage_2/UCI_Credit_Card.csv')
+    X_dat = data.drop('default.payment.next.month', axis = 1)
+    y_dat = data['default.payment.next.month']
+    
+    ft = AutoFeatSelection(task = "binary_classification", keep = None, method = 'auto')
+    feats_selected_, num_features = ft.generate_best_feats(X_dat, y_dat)
+    print(feats_selected_, num_features)
+        
