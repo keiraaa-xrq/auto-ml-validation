@@ -36,7 +36,7 @@ class AutoFeatSelection(BaseEstimator):
         Attributes:
             - feats_selected_: list of good features (to select via pandas DataFrame columns)
             - num_features: remaining count of features after feature selection
-            - original_columns_: original columns of X when calling fit
+            - predictors_original : original columns of X when calling fit
             - output_df_: dataframe of predictors and target variable
         """
         
@@ -66,7 +66,8 @@ class AutoFeatSelection(BaseEstimator):
         feats_selected_, num_features = [], 0
         if self.keep is None:
             self.keep = []
-            
+        else:
+            self._verbose_print('Retaining Features: ' + self.keep)
         predictors_original = predictors.copy(deep = True)
         predictors = predictors.drop(self.keep, axis = 1)
         
@@ -90,7 +91,9 @@ class AutoFeatSelection(BaseEstimator):
             if predictors.shape[1] > 20: # If more than 20, use intrinsic technique 
                 feats_selected_, num_features = self._feature_select_intrinsic(predictors, target)
             else: # If less than 20, use greedy technique
-                feats_selected_, num_features = self._feature_select_greedy(predictors, target) 
+                feats_selected_, num_features = self._feature_select_greedy(predictors, target)
+                
+        self._verbose_print('Features Selection Completed.')
                 
         if not self.keep:
             return feats_selected_, num_features
@@ -138,6 +141,7 @@ class AutoFeatSelection(BaseEstimator):
             return feats_selected_, len(feats_selected_)
         
         feats_selected_, num_features = _rf_selected_features(X, y)
+        
         return feats_selected_, num_features
             
     def _feature_select_greedy(self, X: pd.DataFrame, y):
@@ -238,8 +242,12 @@ class AutoFeatSelection(BaseEstimator):
         return _common_filter(X, y)
         
     @property
-    def n_features(self):
+    def get_n_features(self):
         return len(self.feats_selected_)
+    
+    @property
+    def get_features_selected(self):
+        return self.feats_selected_
     
     
 if __name__ == "__main__":
