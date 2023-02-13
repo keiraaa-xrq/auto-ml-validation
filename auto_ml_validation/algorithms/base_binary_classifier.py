@@ -11,18 +11,48 @@ class BaseBinaryClassifier(ABC):
     Base class for binary classifiers.
     """
 
+    @abstractmethod
     def __init__(
         self,
         verbose: Optional[int] = 1
     ):
         self._model = None
+        self._hyperparams = {}
+        self._name = ''
         self._verbose = verbose
 
-    def verbose_print(self, msg):
+    def verbose_print(self, msg: str):
+        """
+        Print the message if in verbose mode.
+        """
         if self._verbose > 0:
             print(msg)
 
-    def load_model(self, model_path):
+    @property
+    def hyperparams(self):
+        """
+        Get the hyperparameters of the model.
+        """
+        return self._hyperparams
+
+    def _check_hyperparams_are_valid(self, hyperparams_dict: Dict):
+        """
+        Check if valid hyperparameter names are provided.
+        """
+        for p in hyperparams_dict.keys():
+            if p not in self._hyperparams:
+                raise KeyError(
+                    f"'{p}' is not a valid hyperparameter for {self._name}. The allowed hyperparameters are {list(self._hyperparams.keys())}")
+
+    @hyperparams.setter
+    def hyperparams(self, hyperparams_dict: Dict):
+        """
+        Update the hyperparameters.
+        """
+        self._check_hyperparams_are_valid(hyperparams_dict)
+        self._hyperparams.update(hyperparams_dict)
+
+    def load_model(self, model_path: str):
         """
         Load an existing model from path.
         """
@@ -31,28 +61,40 @@ class BaseBinaryClassifier(ABC):
         self.verbose_print(model_path + ' successfully loaded.')
 
     @abstractmethod
+    def _init_model(self, hyperparams_dict: Optional[Dict] = None):
+        """
+        Instantiate an empty model with the specified hyperparameters.
+        """
+        if hyperparams_dict is not None:
+            self.hyperparams = hyperparams_dict
+
     def fit(
         self,
         X_train: pd.DataFrame,
         y_train: pd.Series,
+        hyperparams_dict: Optional[Dict] = None,
         save: bool = True,
         save_path: Optional[str] = None
     ):
         """
-        Build a model from training data.
+        Build a model from training data with hyperparameter tuning.
         """
+        self._init_model(hyperparams_dict)
         self._model.fit(X_train, y_train)
         self.verbose_print("Training completed.")
         if save:
+            if save_path is None:
+                raise ValueError(
+                    "Please provide a valid path for saving the model.")
             pickle.dump(self._model, open(save_path, 'wb'))
 
-    def check_is_fitted(self):
+    def _check_is_fitted(self):
         """
         Check if the model has been fitted.
         """
         if self._model is None:
             raise AttributeError(
-                "This instance is not fitted yet. Call 'fit' or 'load_model' before using this estimator."
+                f"This {self._name} instance is not fitted yet. Call 'fit' or 'load_model' before using this estimator."
             )
 
     def predict_proba(
@@ -62,7 +104,7 @@ class BaseBinaryClassifier(ABC):
         """
         Predict class probabilities for X.
         """
-        self.check_is_fitted()
+        self._check_is_fitted()
         pred_proba = self._model.predict_proba(X)
         return pred_proba
 

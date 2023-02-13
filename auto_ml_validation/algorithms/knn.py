@@ -7,21 +7,23 @@ from .base_binary_classifier import BaseBinaryClassifier
 
 
 class KNNClassifier(BaseBinaryClassifier):
-
-    def fit(
+    def __init__(
         self,
-        X_train: pd.DataFrame,
-        y_train: pd.Series,
-        save: bool = True,
-        save_path: Optional[str] = "../models/knn.pkl"
+        verbose: Optional[int] = 1
     ):
-        """
-        Build a KNN classifier from training data.
-        """
-        # perfrom oversampling with SMOTE
-        X_resampled, y_resampled = SMOTE(
-            random_state=42, sampling_strategy=0.5).fit_resample(X_train, y_train)
-        size = X_resampled.shape[0]
-        self._model = KNeighborsClassifier(
-            n_neighbors=int(np.sqrt(size)), weights='distance')
-        super().fit(X_resampled, y_resampled, save, save_path)
+        super().__init__(verbose)
+        self._hyperparams = {
+            'n_neighbors': 5,
+            'weights': 'uniform',
+            'algorithm': 'auto',
+            'leaf_size': 30,
+            'p': 2,
+            'metric': 'minkowski',
+            'metric_params': None,
+            'n_jobs': None
+        }
+        self._name = 'K Neighbors Classifier'
+
+    def _init_model(self, hyperparams_dict: Optional[Dict] = None):
+        super()._init_model(hyperparams_dict)
+        self._model = KNeighborsClassifier(**self._hyperparams)

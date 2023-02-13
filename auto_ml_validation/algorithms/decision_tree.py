@@ -6,17 +6,27 @@ from .base_binary_classifier import BaseBinaryClassifier
 
 class DTClassifier(BaseBinaryClassifier):
 
-    def fit(
+    def __init__(
         self,
-        X_train: pd.DataFrame,
-        y_train: pd.Series,
-        save: bool = True,
-        save_path: Optional[str] = "../models/decision_tree.pkl"
+        verbose: Optional[int] = 1
     ):
-        """
-        Build a decision tree classifier from training data.
-        """
+        super().__init__(verbose)
+        self._hyperparams = {
+            'criterion': 'gini',
+            'splitter': 'best',
+            'max_depth': None,
+            'min_samples_split': 2,
+            'min_samples_leaf': 1,
+            'min_weight_fraction_leaf': 0.0,
+            'max_features': None,
+            'random_state': 42,
+            'max_leaf_nodes': None,
+            'min_impurity_decrease': 0.0,
+            'class_weight': None,
+            'ccp_alpha': 0.0
+        }
+        self._name = 'Decision Tree Classifier'
 
-        self._model = DecisionTreeClassifier(
-            max_depth=10, min_samples_split=5, max_features='sqrt', random_state=42, class_weight='balanced')
-        super().fit(X_train, y_train, save, save_path)
+    def _init_model(self, hyperparams_dict: Optional[Dict] = None):
+        super()._init_model(hyperparams_dict)
+        self._model = DecisionTreeClassifier(**self._hyperparams)
