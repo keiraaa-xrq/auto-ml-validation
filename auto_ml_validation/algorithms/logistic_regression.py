@@ -1,32 +1,27 @@
-import pandas as pd
-from sklearn.linear_model import LogisticRegression
 from typing import *
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from scipy import stats
 from .base_binary_classifier import BaseBinaryClassifier
 
 
 class LogisticClassifier(BaseBinaryClassifier):
+
+    PARAM_DISTRIBUTIONS = {
+        'C': stats.loguniform(a=0.01, b=100),
+        'solver': ['lbfgs', 'liblinear', 'sag'],
+        'max_iter': np.arange(100, 1000, 100)
+    }
+
     def __init__(
         self,
+        params: Optional[Dict] = {
+            'class_weight': 'balanced',
+            'random_state': 42,
+        },
         verbose: Optional[int] = 1
     ):
         super().__init__(verbose)
-        self._hyperparams = {
-            'penalty': 'l2',
-            'dual': False,
-            'tol': 1e-4,
-            'C': 1.0,
-            'fit_intercept': True,
-            'intercept_scaling': 1,
-            'class_weight': None,
-            'random_state': 42,
-            'solver': 'lbfgs',
-            'max_iter': 100,
-            'multi_class': 'auto',
-            'verbose': 0,
-            'n_jobs': None,
-            'l1_ratio': None
-        }
-
-    def _init_model(self, hyperparams_dict: Optional[Dict] = None):
-        super()._init_model(hyperparams_dict)
-        self._model = LogisticRegression(**self._hyperparams)
+        self._model = LogisticRegression(**params)
+        self._name = 'Logistic Classifier'
