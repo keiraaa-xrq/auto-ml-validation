@@ -1,32 +1,24 @@
-import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
 from typing import *
+import pandas as pd
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier
 from .base_binary_classifier import BaseBinaryClassifier
 
 
 class DTClassifier(BaseBinaryClassifier):
 
+    PARAM_DISTRIBUTIONS = {
+        'criterion': ['gini', 'entropy'],
+        'max_depth': np.arange(4, 12, 2),
+        'min_samples_split': np.arange(2, 8, 2),
+        'min_samples_leaf': np.arange(1, 5, 1),
+    }
+
     def __init__(
         self,
+        params: Optional[Dict] = {'random_state': 42},
         verbose: Optional[int] = 1
     ):
         super().__init__(verbose)
-        self._hyperparams = {
-            'criterion': 'gini',
-            'splitter': 'best',
-            'max_depth': None,
-            'min_samples_split': 2,
-            'min_samples_leaf': 1,
-            'min_weight_fraction_leaf': 0.0,
-            'max_features': None,
-            'random_state': 42,
-            'max_leaf_nodes': None,
-            'min_impurity_decrease': 0.0,
-            'class_weight': None,
-            'ccp_alpha': 0.0
-        }
+        self._model = DecisionTreeClassifier(**params)
         self._name = 'Decision Tree Classifier'
-
-    def _init_model(self, hyperparams_dict: Optional[Dict] = None):
-        super()._init_model(hyperparams_dict)
-        self._model = DecisionTreeClassifier(**self._hyperparams)
