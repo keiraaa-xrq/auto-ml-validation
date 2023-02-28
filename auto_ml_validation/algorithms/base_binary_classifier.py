@@ -73,16 +73,12 @@ class BaseBinaryClassifier(ABC):
         self,
         X_train: pd.DataFrame,
         y_train: pd.Series,
-        save: bool = False,
-        save_path: Optional[str] = None
     ):
         """
         Build a model from training data with specified hyperparameter values.
         """
         self._model.fit(X_train, y_train)
         self._verbose_print("Training completed.")
-        if save:
-            self.save_model(save_path)
 
     def _check_valid_metric(self, metric: str):
         """
@@ -102,9 +98,6 @@ class BaseBinaryClassifier(ABC):
         n_jobs=-2,
         random_state: int = 42,
         verbose: int = 3,
-        save: bool = False,
-        model_save_path: Optional[str] = None,
-        param_save_path: Optional[str] = None,
     ):
         """
         Perform hyperparameter tuning with random search CV.
@@ -124,9 +117,6 @@ class BaseBinaryClassifier(ABC):
         self._verbose_print(
             f"Best hyperparameters: {clf.best_params_}; best score: {clf.best_score_}.")
         self._model = clf.best_estimator_
-        if save:
-            self.save_model(model_save_path)
-            self.save_params(param_save_path)
 
     def predict_proba(
         self,
