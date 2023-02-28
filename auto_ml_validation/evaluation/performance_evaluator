@@ -5,9 +5,15 @@ import matplotlib.pyplot as plt
 
 class PerformanceEvaluator:
     
-    def __init__(self, y_pred, y_true):
-        self.y_pred = y_pred
+    def __init__(self, proba, threshold, y_true):
+        self.proba = proba
+        self.threshold = threshold
         self.y_true = y_true
+        self.y_pred = self.get_pred()
+
+    
+    def get_pred(self):
+        return np.array([1 if x > self.threshold else 0 for x in self.proba])
         
 
     def cal_metrics(self) -> float:
@@ -20,18 +26,18 @@ class PerformanceEvaluator:
 
 
     def get_roc_curve(self):
-        fpr, tpr, thresholds = skl.roc_curve(self.y_true, self.y_pred)
+        fpr, tpr, thresholds = skl.roc_curve(self.y_true, self.proba)
         plt.plot(fpr, tpr)
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
         
     def get_pr_curve(self):
-        precision, recall, thres = skl.precision_recall_curve(self.y_true, self.y_pred)
+        precision, recall, thres = skl.precision_recall_curve(self.y_true, self.proba)
         plt.plot(recall, precision, label="Precison-recall curve")
 
 
     def get_auc(self):
-        fpr, tpr, thresholds = skl.roc_curve(self.y_true, self.y_pred)
+        fpr, tpr, thresholds = skl.roc_curve(self.y_true, self.proba)
         return skl.auc(fpr, tpr)
 
 
