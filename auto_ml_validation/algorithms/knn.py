@@ -1,27 +1,24 @@
+from typing import *
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
-from typing import *
-from imblearn.over_sampling import SMOTE
+from scipy import stats
 from .base_binary_classifier import BaseBinaryClassifier
 
 
 class KNNClassifier(BaseBinaryClassifier):
 
-    def fit(
+    PARAM_DISTRIBUTIONS = {
+        'n_neighbors': np.arange(5, 35, 5),
+        'weights': ['uniform', 'distance'],
+        'p': [1, 2, 3, 4, 5]
+    }
+
+    def __init__(
         self,
-        X_train: pd.DataFrame,
-        y_train: pd.Series,
-        save: bool = True,
-        save_path: Optional[str] = "../models/knn.pkl"
+        params: Optional[Dict] = {'weights': 'distance'},
+        verbose: Optional[int] = 1
     ):
-        """
-        Build a KNN classifier from training data.
-        """
-        # perfrom oversampling with SMOTE
-        X_resampled, y_resampled = SMOTE(
-            random_state=42, sampling_strategy=0.5).fit_resample(X_train, y_train)
-        size = X_resampled.shape[0]
-        self._model = KNeighborsClassifier(
-            n_neighbors=int(np.sqrt(size)), weights='distance')
-        super().fit(X_resampled, y_resampled, save, save_path)
+        super().__init__(verbose)
+        self._model = KNeighborsClassifier(**params)
+        self._name = 'K Neighbors Classifier'

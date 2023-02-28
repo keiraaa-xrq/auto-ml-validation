@@ -1,20 +1,28 @@
-import pandas as pd
-from sklearn.linear_model import LogisticRegression
 from typing import *
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from scipy import stats
 from .base_binary_classifier import BaseBinaryClassifier
 
 
 class LogisticClassifier(BaseBinaryClassifier):
 
-    def fit(
+    PARAM_DISTRIBUTIONS = {
+        'C': stats.loguniform(a=0.01, b=100),
+        'solver': ['lbfgs', 'liblinear', 'sag'],
+    }
+
+    def __init__(
         self,
-        X_train: pd.DataFrame,
-        y_train: pd.Series,
-        save: bool = True,
-        save_path: Optional[str] = "../models/logistic_regression.pkl"
+        params: Optional[Dict] = {
+            'class_weight': 'balanced',
+            'random_state': 42,
+            'max_iter': 2000,
+            'tol': 1e-4,
+        },
+        verbose: Optional[int] = 1
     ):
-        """
-        Build a simple logistic regression classifier from training data.
-        """
-        self._model = LogisticRegression(solver='lbfgs', max_iter=1000)
-        super().fit(X_train, y_train, save, save_path)
+        super().__init__(verbose)
+        self._model = LogisticRegression(**params)
+        self._name = 'Logistic Classifier'

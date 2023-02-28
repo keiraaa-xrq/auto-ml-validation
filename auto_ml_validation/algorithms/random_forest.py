@@ -7,17 +7,19 @@ from .base_binary_classifier import BaseBinaryClassifier
 
 class RFClassifier(BaseBinaryClassifier):
 
-    def fit(
-        self,
-        X_train: pd.DataFrame,
-        y_train: pd.Series,
-        save: bool = True,
-        save_path: Optional[str] = "../models/random_forest.pkl"
-    ):
-        """
-        Build a random forest classifier from training data.
-        """
+    PARAM_DISTRIBUTIONS = {
+        'n_estimators': np.arange(50, 500, 50),
+        'criterion': ['gini', 'entropy'],
+        'max_depth': np.arange(4, 20, 2),
+        'min_samples_split': np.arange(2, 10, 2),
+        'min_samples_leaf': np.arange(1, 10, 2),
+    }
 
-        self._model = RandomForestClassifier(
-            max_depth=10, min_samples_split=5, max_features='sqrt', random_state=42, class_weight='balanced')
-        super().fit(X_train, y_train, save, save_path)
+    def __init__(
+        self,
+        params: Optional[Dict] = {'random_state': 42},
+        verbose: Optional[int] = 1
+    ):
+        super().__init__(verbose)
+        self._model = RandomForestClassifier(**params)
+        self._name = 'Random Forest Classifier'

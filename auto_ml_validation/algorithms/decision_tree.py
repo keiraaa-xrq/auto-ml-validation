@@ -1,22 +1,24 @@
-import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
 from typing import *
+import pandas as pd
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier
 from .base_binary_classifier import BaseBinaryClassifier
 
 
 class DTClassifier(BaseBinaryClassifier):
 
-    def fit(
-        self,
-        X_train: pd.DataFrame,
-        y_train: pd.Series,
-        save: bool = True,
-        save_path: Optional[str] = "../models/decision_tree.pkl"
-    ):
-        """
-        Build a decision tree classifier from training data.
-        """
+    PARAM_DISTRIBUTIONS = {
+        'criterion': ['gini', 'entropy'],
+        'max_depth': np.arange(4, 12, 2),
+        'min_samples_split': np.arange(2, 8, 2),
+        'min_samples_leaf': np.arange(1, 5, 1),
+    }
 
-        self._model = DecisionTreeClassifier(
-            max_depth=10, min_samples_split=5, max_features='sqrt', random_state=42, class_weight='balanced')
-        super().fit(X_train, y_train, save, save_path)
+    def __init__(
+        self,
+        params: Optional[Dict] = {'random_state': 42},
+        verbose: Optional[int] = 1
+    ):
+        super().__init__(verbose)
+        self._model = DecisionTreeClassifier(**params)
+        self._name = 'Decision Tree Classifier'
