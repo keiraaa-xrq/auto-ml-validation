@@ -1,7 +1,6 @@
 from typing import *
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from .utils import check_columns
 
 

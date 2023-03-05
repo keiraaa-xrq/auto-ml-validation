@@ -11,7 +11,7 @@ class SVClassifier(BaseBinaryClassifier):
     PARAM_DISTRIBUTIONS = {
         'C': stats.loguniform(a=0.01, b=100),
         'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
-        'degree': [2, 3, 4, 5],
+        'degree': [2, 3, 4],
     }
 
     def __init__(
@@ -19,7 +19,9 @@ class SVClassifier(BaseBinaryClassifier):
         params: Optional[Dict] = {
             'class_weight': 'balanced',
             'random_state': 42,
-            'probability': True
+            'probability': True,
+            'max_iter': 2000,
+            'tol': 1e-4
         },
         verbose: Optional[int] = 1
     ):
