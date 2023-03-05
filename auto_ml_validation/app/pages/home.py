@@ -27,6 +27,61 @@ upload_style = {
                 'backgroundColor':'#ff8d74'
             }
 
+def project_field():
+    form_fields = [dbc.Row([
+            dbc.Col(
+                dbc.Form([
+                    dbc.Label("Enter Project Name"),
+                    dbc.Input(id="project-name", placeholder="Project Name", type="text")
+                ]),
+                width={"size": 3, "offset": 4},
+                className="text-center"
+            )
+        ]),
+        html.Br(),
+        dbc.Row([
+            dbc.Col(
+                dbc.Form([
+                    dbc.Label("Select Model's Algorithm"),
+                    dcc.Dropdown(
+                        id="model-dropdown",
+                        options=[
+                            {"label": "Logistic Regression", "value": 'LR'},
+                            {"label": "Decision Tree", "value": 'DT'},
+                            {"label": "Support Vector Machine", "value": 'SVM'},
+                            {'label': "Random Forest", "value": 'RF'},
+                            {'label': "K-Nearest Neighbours", "value": 'KNN'},
+                            {"label": "XGBoost", "value": 'XGB'}
+                        ],
+                        value=None
+                    )
+                ]),
+                width={"size": 3, "offset": 4},
+                className="text-center"
+            )
+        ])
+    ,
+    # Variables Storing
+        html.Div(id='user-input'),
+        dcc.Store(id='store-project', data={}, storage_type='memory'), # Dictionary of Project Config {project name: value, algorithm: value}
+        dcc.Store(id='hyperparams-value', data = {}), # Dictionary of Hyperparameters {hyperparameter: value}
+        dcc.Store(id='store-rep-data', data = {}),
+        
+        ]
+
+    form = dbc.Form(form_fields, id="form")
+
+    submit_button = html.Div(dbc.Button("OK", 
+                                        id="submit-button", 
+                                        color="primary",
+                                        className="mx-auto d-block"),
+                            style={"marginTop": "20px", "textAlign": "center"})
+    
+    return form, submit_button
+
+
+
+
 def params_layout(hyperparams) -> html.Div:
     """This function renders the hyperparameters form page based on algorithm selected. This is for replicating the model.
 
@@ -59,6 +114,27 @@ def rep_dataset_layout() -> html.Div:
     """
 
     return html.Div([
+        # New Heading
+        html.Div([
+            html.H5('Part I. Model Replication', style={'textAlign': 'left', 'fontWeight': 'bold'})
+        ], style={'backgroundColor': '#ffaf77', 'width': '100%', 'top': 0, 'left': 0, 'margin': 0}),
+        html.Div([
+            # Instructions
+            html.H5("Please upload the JSON file of model's hyperparameters: ", style={'textAlign': 'center'}),
+            html.H6("Within the file, keys will be the parameters name E.g. {class_weight: {0:0.8, 1:0.2}}", style={'textAlign': 'center', 'color': '#4f4f4f ', 'font-size': '13px'}),
+            # Files Upload
+            html.H6('Hyperparameters Values', style={'textAlign': 'center'}),
+            html.Div([
+            dcc.Input(id='hyperparams-input', placeholder = 'Select JSON File...', type='text', value=''),
+            dcc.Upload(
+                id='hyperparams-upload',
+                children=html.Div([  
+                    html.A('Browse File', style = {'color':'black'})
+                ]),
+            style= upload_style,
+            ),
+            ], style = {'display':'flex','alignItems':'center','justifyContent': 'center', 'gap': '10px', 'margin-bottom': '30px'}),
+            ]),
         html.Div([
             # Instructions
             html.H5('Please upload the processed datasets for running the model:', style={'textAlign': 'center'}),
@@ -77,11 +153,11 @@ def rep_dataset_layout() -> html.Div:
             ], style = {'display':'flex','alignItems':'center','justifyContent': 'center', 'gap': '10px'}),
             ]),
             html.Div([
-            html.H6('Validation Dataset', style={'textAlign': 'center'}),
+            html.H6('Test Dataset', style={'textAlign': 'center'}),
             html.Div([
-            dcc.Input(id='val-dataset-input', placeholder = 'Select Validation Dataset...', type='text', value=''),
+            dcc.Input(id='test-dataset-input', placeholder = 'Select Test Dataset...', type='text', value=''),
             dcc.Upload(
-                id='val-dataset-upload',
+                id='test-dataset-upload',
                 children=html.Div([
                     html.A('Browse File', style = {'color':'black'})
                 ]),
@@ -90,11 +166,11 @@ def rep_dataset_layout() -> html.Div:
             ], style = {'display':'flex','alignItems':'center','justifyContent': 'center', 'gap': '10px'}),
             ]),
             html.Div([
-            html.H6('Test Dataset', style={'textAlign': 'center'}),
+            html.H6('Other Dataset', style={'textAlign': 'center'}),
             html.Div([
-            dcc.Input(id='test-dataset-input', placeholder = 'Select Test Dataset...', type='text', value=''),
+            dcc.Input(id='other-dataset-input', placeholder = 'Select Other Dataset...', type='text', value=''),
             dcc.Upload(
-                id='test-dataset-upload',
+                id='other-dataset-upload',
                 children=html.Div([
                     html.A('Browse File',style = {'color':'black'})
                 ]),
@@ -123,6 +199,9 @@ def auto_dataset_layout() -> html.Div:
 
     return html.Div([
         html.Div([
+            html.H5('Part II. Automatic Benchmark', style={'textAlign': 'left', 'fontWeight': 'bold'})
+        ], style={'backgroundColor': '#ffaf77', 'width': '100%', 'top': 0, 'left': 0, 'margin': 0}),
+        html.Div([
             # Instructions
             # Dropdown
             html.H6('Please select evaluation metric:', style={'textAlign': 'center'}),
@@ -132,11 +211,12 @@ def auto_dataset_layout() -> html.Div:
                         {'label': 'F1', 'value': 'f1'},
                         {'label': 'Precision', 'value': 'precision'},
                         {'label': 'Accuracy', 'value': 'accuracy'},
-                        {'label': 'Recall', 'value': 'recall'}
+                        {'label': 'Recall', 'value': 'recall'},
+                        {'label': 'R-Squared', 'value': 'r_squared'}
                     ],
                     value='f1'
                 ),
-            html.H6('Incorporate Auto-Feature Selection?', style={'textAlign': 'center'}),
+            html.H6('Incorporate Auto-Feature Selection?', style={'textAlign': 'center', 'margin-top': '20px'}),
                 dcc.RadioItems(
                     id='auto-feat-select-radio',
                     options=[
@@ -148,7 +228,7 @@ def auto_dataset_layout() -> html.Div:
                     inputStyle={'margin-right': '5px'},
                     style={'display': 'flex', 'gap': '30px', 'alignItems':'center','justifyContent': 'center'}
                 ), 
-            html.H5('Please upload the processed datasets for auto benchmarking:', style={'textAlign': 'center'}),
+            html.H5('Please upload the processed datasets for auto benchmarking:', style={'textAlign': 'center','margin-top': '30px'}),
             html.H6('Datasets should be processed and contain only selected features along with the target variable.', style={'textAlign': 'center', 'color': '#4f4f4f ', 'font-size': '13px'}),
             # Files Upload
             html.H6('Train Dataset', style={'textAlign': 'center'}),
@@ -164,11 +244,11 @@ def auto_dataset_layout() -> html.Div:
             ], style = {'display':'flex','alignItems':'center','justifyContent': 'center', 'gap': '10px'}),
             ]),
             html.Div([
-            html.H6('Validation Dataset', style={'textAlign': 'center'}),
+            html.H6('Test Dataset', style={'textAlign': 'center'}),
             html.Div([
-            dcc.Input(id='val-auto-input', placeholder = 'Select Validation Dataset...', type='text', value=''),
+            dcc.Input(id='test-auto-input', placeholder = 'Select Test Dataset...', type='text', value=''),
             dcc.Upload(
-                id='val-auto-upload',
+                id='test-auto-upload',
                 children=html.Div([
                     html.A('Browse File', style = {'color':'black'})
                 ]),
@@ -177,11 +257,11 @@ def auto_dataset_layout() -> html.Div:
             ], style = {'display':'flex','alignItems':'center','justifyContent': 'center', 'gap': '10px'}),
             ]),
             html.Div([
-            html.H6('Test Dataset', style={'textAlign': 'center'}),
+            html.H6('Other Dataset', style={'textAlign': 'center'}),
             html.Div([
-            dcc.Input(id='test-auto-input', placeholder = 'Select Test Dataset...', type='text', value=''),
+            dcc.Input(id='other-auto-input', placeholder = 'Select Other Dataset...', type='text', value=''),
             dcc.Upload(
-                id='test-auto-upload',
+                id='other-auto-upload',
                 children=html.Div([
                     html.A('Browse File',style = {'color':'black'})
                 ]),
@@ -192,3 +272,5 @@ def auto_dataset_layout() -> html.Div:
             ],
         style=container_style
         )
+
+
