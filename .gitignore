@@ -135,3 +135,5 @@ dmypy.json
 
 # System generated file
 .DS_Store
+data/.DS_Store
+auto_ml_validation/.DS_Store
