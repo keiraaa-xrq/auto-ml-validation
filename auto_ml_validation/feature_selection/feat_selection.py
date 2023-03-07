@@ -53,7 +53,7 @@ class AutoFeatSelection(BaseEstimator):
         # TODO
         return True
         
-    def generate_best_feats(self, predictors: pd.DataFrame, target) -> pd.DataFrame:
+    def generate_best_feats(self, predictors: pd.DataFrame, target, model, scoring_method) -> pd.DataFrame:
         """
         Selects best predictive features given the data and targets.
         Inputs:
@@ -84,14 +84,14 @@ class AutoFeatSelection(BaseEstimator):
         if self.method == 'intrinsic':
             feats_selected_, num_features = self._feature_select_intrinsic(predictors, target)
         elif self.method == 'greedy':
-            feats_selected_, num_features = self._feature_select_greedy(predictors, target)
+            feats_selected_, num_features = self._feature_select_greedy(predictors, target, model, scoring_method)
         elif self.method == 'filter':
              feats_selected_, num_features = self._feature_select_filter(predictors, target)
         else: # auto
             if predictors.shape[1] > 20: # If more than 20, use intrinsic technique 
                 feats_selected_, num_features = self._feature_select_intrinsic(predictors, target)
             else: # If less than 20, use greedy technique
-                feats_selected_, num_features = self._feature_select_greedy(predictors, target)
+                feats_selected_, num_features = self._feature_select_greedy(predictors, target, model, scoring_method)
                 
         self._verbose_print('Features Selection Completed.')
                 
@@ -144,7 +144,7 @@ class AutoFeatSelection(BaseEstimator):
         
         return feats_selected_, num_features
             
-    def _feature_select_greedy(self, X: pd.DataFrame, y):
+    def _feature_select_greedy(self, X: pd.DataFrame, y, model, scoring_method):
         """
         Greedy methods for feature selection
         Inputs:
@@ -153,12 +153,9 @@ class AutoFeatSelection(BaseEstimator):
         """
         self._verbose_print('Beginning Greedy Feature Selection Method.')
         
-        scoring_method = 'accuracy'
-
         #Possible Scoring : accuracy, f1, precision, recall, roc_auc
-        def _forward_selected_feature(X, y):
-            clf = RandomForestClassifier(n_estimators=100, n_jobs=-1)
-            sfs1 = SFS(clf,
+        def _forward_selected_feature(X, y, model, scoring_method):
+            sfs1 = SFS(model,
                        k_features= (1, len(X.columns)),
                        forward=True,
                        floating=False,
@@ -170,23 +167,21 @@ class AutoFeatSelection(BaseEstimator):
             self._verbose_print(sfs1.k_score_)
             return feats_selected, len(feats_selected)
         
-        def _backward_selected_feature(X, y):
-            clf = RandomForestClassifier(n_estimators=100, n_jobs=-1)
-            sfs1 = SFS(clf,
+        def _backward_selected_feature(X, y, model, scoring_method):
+            sfs1 = SFS(model,
                        k_features= (1, len(X.columns)),
                        forward=False,
                        floating=False,
                        verbose=2,
                        scoring=scoring_method,
-                       cv=5)
+                       cv=3)
             sfs1 = sfs1.fit(X, y)
             feats_selected = list(sfs1.k_feature_names_)
             self._verbose_print(sfs1.k_score_)
             return feats_selected, len(feats_selected)
         
-        def _exhausive_selected_feature(X, y):
-            clf = RandomForestClassifier(n_estimators=100, n_jobs=-1)
-            efs1 = EFS(clf, 
+        def _exhausive_selected_feature(X, y, model, scoring_method):
+            efs1 = EFS(model, 
                        min_features=1,
                        max_features=len(X.columns),
                        scoring=scoring_method,
@@ -205,8 +200,8 @@ class AutoFeatSelection(BaseEstimator):
             num_features = clf.n_features_
             return feats_selected_, num_features
         
-        return _forward_selected_feature(X, y)
-        #return _backward_selected_feature(X, y)
+        #return _forward_selected_feature(X, y, model, scoring_method)
+        return _backward_selected_feature(X, y, model, scoring_method)
         #return  _exhausive_selected_feature(X, y)
     
     
