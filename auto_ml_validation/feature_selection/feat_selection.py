@@ -88,10 +88,8 @@ class AutoFeatSelection(BaseEstimator):
         elif self.method == 'filter':
              feats_selected_, num_features = self._feature_select_filter(predictors, target)
         else: # auto
-            if predictors.shape[1] > 20: # If more than 20, use intrinsic technique 
-                feats_selected_, num_features = self._feature_select_intrinsic(predictors, target)
-            else: # If less than 20, use greedy technique
-                feats_selected_, num_features = self._feature_select_greedy(predictors, target, model, scoring_method)
+            feats_selected_, num_features = self._feature_select_greedy(predictors, target, model, scoring_method)
+
                 
         self._verbose_print('Features Selection Completed.')
                 
