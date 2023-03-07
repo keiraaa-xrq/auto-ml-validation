@@ -4,7 +4,10 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from .utils import check_columns
 
 
-def split_x_y(data: pd.DataFrame, target: str):
+def split_x_y(
+    data: pd.DataFrame,
+    target: str
+) -> Tuple[pd.DataFrame, pd.Series]:
     '''
     Split a dataframe into features and target.
     '''
@@ -19,7 +22,7 @@ def process_features(
     X_train: pd.DataFrame,
     X_others: List[pd.DataFrame],
     cat_cols: List[str]
-):
+) -> Tuple[pd.DataFrame, List[pd.DataFrame]]:
     """
     Perform one-hot encoding on categorical features 
     and standard scaling on continuous features.
@@ -55,7 +58,7 @@ def process_data(
     other_dfs: List[pd.DataFrame],
     target: str,
     cat_cols: List[str]
-):
+) -> Tuple[pd.DataFrame, pd.Series, List[Tuple[pd.DataFrame, pd.Series]]]:
     """
     Perform data processing.
     """
