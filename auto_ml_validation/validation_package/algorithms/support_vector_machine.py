@@ -20,8 +20,7 @@ class SVClassifier(BaseBinaryClassifier):
             'class_weight': 'balanced',
             'random_state': 42,
             'probability': True,
-            'max_iter': 2000,
-            'tol': 1e-4
+            'tol': 1e-3
         },
         verbose: Optional[int] = 1
     ):

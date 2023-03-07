@@ -17,8 +17,8 @@ class LogisticClassifier(BaseBinaryClassifier):
         params: Optional[Dict] = {
             'class_weight': 'balanced',
             'random_state': 42,
-            'max_iter': 2000,
-            'tol': 1e-4,
+            'max_iter': 5000,
+            'tol': 1e-3,
         },
         verbose: Optional[int] = 1
     ):

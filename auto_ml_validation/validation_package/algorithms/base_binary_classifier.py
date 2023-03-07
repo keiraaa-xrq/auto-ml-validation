@@ -105,7 +105,7 @@ class BaseBinaryClassifier(ABC):
         param_distributions: Dict = {},
         n_iter: int = 8,
         cv: int = 5,
-        n_jobs=1,
+        n_jobs=-1,
         random_state: int = 42,
         verbose: int = 3,
     ):
@@ -155,7 +155,8 @@ class BaseBinaryClassifier(ABC):
         self,
         X_val: pd.DataFrame,
         y_val: pd.Series,
-        metric: str
+        metric: str,
+        verbose: int = 1
     ) -> Tuple[float]:
         """
         Return the optimal prediction threshold for self.model.
@@ -167,10 +168,12 @@ class BaseBinaryClassifier(ABC):
         for t in thresholds:
             prediction = np.array([0 if p <= t else 1 for p in pos_proba])
             score = self.EVAL_METRICS[metric](y_val, prediction)
-            self._verbose_print(f'Threshold: {t}; Score: {score}')
+            if verbose:
+                self._verbose_print(f'Threshold: {t}; Score: {score}')
             if score > max_score:
                 max_score = score
                 best_threshold = t
-        self._verbose_print(
-            f"Best threshold: {best_threshold}; best {metric}: {max_score}.")
+        if verbose:
+            self._verbose_print(
+                f"Best threshold: {best_threshold}; best {metric}: {max_score}.")
         return best_threshold, max_score
