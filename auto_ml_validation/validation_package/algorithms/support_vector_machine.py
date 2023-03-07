@@ -3,10 +3,10 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 from sklearn.svm import SVC
-from .base_binary_classifier import BaseBinaryClassifier
+from .abstract_binary_classifier import AbstractBinaryClassifier
 
 
-class SVClassifier(BaseBinaryClassifier):
+class SVClassifier(AbstractBinaryClassifier):
 
     PARAM_DISTRIBUTIONS = {
         'C': stats.loguniform(a=0.01, b=100),

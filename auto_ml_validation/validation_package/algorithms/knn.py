@@ -3,10 +3,10 @@ import pandas as pd
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 from scipy import stats
-from .base_binary_classifier import BaseBinaryClassifier
+from .abstract_binary_classifier import AbstractBinaryClassifier
 
 
-class KNNClassifier(BaseBinaryClassifier):
+class KNNClassifier(AbstractBinaryClassifier):
 
     PARAM_DISTRIBUTIONS = {
         'n_neighbors': np.arange(5, 35, 5),

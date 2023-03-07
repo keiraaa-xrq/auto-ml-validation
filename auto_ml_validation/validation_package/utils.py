@@ -1,6 +1,6 @@
 from typing import *
 import pandas as pd
-from .algorithms.base_binary_classifier import BaseBinaryClassifier
+from .algorithms.abstract_binary_classifier import AbstractBinaryClassifier
 from .algorithms.decision_tree import DTClassifier
 from .algorithms.knn import KNNClassifier
 from .algorithms.logistic_regression import LogisticClassifier
@@ -27,7 +27,7 @@ def check_columns(data: pd.DataFrame, columns: List[str]):
 def instantiate_clf(
     algo: str,
     params: Dict,
-) -> BaseBinaryClassifier:
+) -> AbstractBinaryClassifier:
     if algo == 'dt':
         clf = DTClassifier(params)
     elif algo == 'knn':

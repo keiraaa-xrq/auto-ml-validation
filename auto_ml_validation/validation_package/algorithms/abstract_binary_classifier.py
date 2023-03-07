@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import *
+import warnings
 import pickle
 import json
 import pandas as pd
@@ -8,7 +9,7 @@ from sklearn import metrics
 from sklearn.model_selection import RandomizedSearchCV
 
 
-class BaseBinaryClassifier(ABC):
+class AbstractBinaryClassifier(ABC):
     """
     Base class for binary classifiers.
     """
@@ -17,7 +18,8 @@ class BaseBinaryClassifier(ABC):
         'accuracy': metrics.accuracy_score,
         'f1': metrics.f1_score,
         'precision': metrics.precision_score,
-        'recall': metrics.recall_score
+        'recall': metrics.recall_score,
+        'roc_auc': metrics.roc_auc_score,
     }
 
     PARAM_DISTRIBUTIONS = {}
@@ -102,6 +104,7 @@ class BaseBinaryClassifier(ABC):
         self,
         X_train: pd.DataFrame,
         y_train: pd.Series,
+        metric: str,
         param_distributions: Dict = {},
         n_iter: int = 8,
         cv: int = 5,
@@ -114,10 +117,12 @@ class BaseBinaryClassifier(ABC):
         """
         if not param_distributions:
             param_distributions = self.PARAM_DISTRIBUTIONS
+        self._check_valid_metric(metric)
         clf = RandomizedSearchCV(
             self._model,
             param_distributions,
             n_iter=n_iter,
+            scoring=metric,
             cv=cv,
             n_jobs=n_jobs,
             random_state=random_state,
@@ -159,11 +164,19 @@ class BaseBinaryClassifier(ABC):
         verbose: int = 1
     ) -> Tuple[float]:
         """
-        Return the optimal prediction threshold for self.model.
+        Return the optimal prediction threshold for 
+        self.model based on the specific metric.
         """
+
         self._check_valid_metric(metric)
         thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
         pos_proba = self.predict_proba(X_val)[:, 1]
+        if metric == 'roc_auc':
+            warnings.warn(
+                'ROC-AUC is threshold invariant. A threshold of 0.5 will be returned.')
+            score = self.EVAL_METRICS[metric](y_val, pos_proba)
+            return 0.5, score
+
         max_score, best_threshold = -1, -1
         for t in thresholds:
             prediction = np.array([0 if p <= t else 1 for p in pos_proba])

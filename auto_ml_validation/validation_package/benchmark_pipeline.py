@@ -2,7 +2,7 @@ from typing import *
 import time
 import pandas as pd
 from joblib import Parallel, delayed
-from .algorithms.base_binary_classifier import BaseBinaryClassifier
+from .algorithms.abstract_binary_classifier import AbstractBinaryClassifier
 from .algorithms.decision_tree import DTClassifier
 from .algorithms.knn import KNNClassifier
 from .algorithms.logistic_regression import LogisticClassifier
@@ -12,19 +12,19 @@ from .algorithms.support_vector_machine import SVClassifier
 
 
 def fit_model(
-    clf: BaseBinaryClassifier,
+    clf: AbstractBinaryClassifier,
     X_train: pd.DataFrame,
     y_train: pd.Series,
     X_val: pd.DataFrame,
     y_val: pd.Series,
     metric: str,
     n_jobs: int,
-) -> Tuple[BaseBinaryClassifier, float, float, float]:
+) -> Tuple[AbstractBinaryClassifier, float, float, float]:
     """
     Perform hyperparameter tuning and threshold optimisation.
     """
     start = time.time()
-    clf.random_search(X_train, y_train, n_jobs=n_jobs, verbose=0)
+    clf.random_search(X_train, y_train, metric, n_jobs=n_jobs, verbose=0)
     best_threshold, max_score = clf.optimise_threshold(
         X_val, y_val, metric, verbose=0)
     end = time.time()
@@ -32,7 +32,7 @@ def fit_model(
     return clf, best_threshold, max_score, dur
 
 
-def instantiate_clfs(n_sample: int) -> List[BaseBinaryClassifier]:
+def instantiate_clfs(n_sample: int) -> List[AbstractBinaryClassifier]:
     """
     Create a list of blank classifier instances.
     """
@@ -52,7 +52,7 @@ def instantiate_clfs(n_sample: int) -> List[BaseBinaryClassifier]:
 
 
 def compare_performance(
-    results: List[Tuple[BaseBinaryClassifier, float, float, float]],
+    results: List[Tuple[AbstractBinaryClassifier, float, float, float]],
     metric: str,
     verbose: True
 ) -> Tuple[str, Dict]:

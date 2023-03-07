@@ -2,10 +2,10 @@ from typing import *
 import pandas as pd
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
-from .base_binary_classifier import BaseBinaryClassifier
+from .abstract_binary_classifier import AbstractBinaryClassifier
 
 
-class DTClassifier(BaseBinaryClassifier):
+class DTClassifier(AbstractBinaryClassifier):
 
     PARAM_DISTRIBUTIONS = {
         'criterion': ['gini', 'entropy'],

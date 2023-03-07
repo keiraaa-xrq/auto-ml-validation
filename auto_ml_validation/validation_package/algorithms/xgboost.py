@@ -3,10 +3,10 @@ import pandas as pd
 import numpy as np
 from xgboost import XGBClassifier
 from scipy import stats
-from .base_binary_classifier import BaseBinaryClassifier
+from .abstract_binary_classifier import AbstractBinaryClassifier
 
 
-class XGBoostClassifier(BaseBinaryClassifier):
+class XGBoostClassifier(AbstractBinaryClassifier):
 
     PARAM_DISTRIBUTIONS = {
         'learning_rate': stats.loguniform(a=0.005, b=0.295),

@@ -3,10 +3,10 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from scipy import stats
-from .base_binary_classifier import BaseBinaryClassifier
+from .abstract_binary_classifier import AbstractBinaryClassifier
 
 
-class LogisticClassifier(BaseBinaryClassifier):
+class LogisticClassifier(AbstractBinaryClassifier):
 
     PARAM_DISTRIBUTIONS = {
         'C': stats.loguniform(a=0.01, b=100),

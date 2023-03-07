@@ -2,10 +2,10 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from typing import *
-from .base_binary_classifier import BaseBinaryClassifier
+from .abstract_binary_classifier import AbstractBinaryClassifier
 
 
-class RFClassifier(BaseBinaryClassifier):
+class RFClassifier(AbstractBinaryClassifier):
 
     PARAM_DISTRIBUTIONS = {
         'n_estimators': np.arange(50, 500, 50),
