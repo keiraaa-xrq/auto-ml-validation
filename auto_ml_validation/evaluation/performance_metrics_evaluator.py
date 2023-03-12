@@ -1,27 +1,28 @@
 import sklearn.metrics as skl
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
 import scikitplot as skp
-from sklearn.inspection import (partial_dependence, PartialDependenceDisplay)
-import matplotlib.pyplot as plt
+from sklearn.inspection import PartialDependenceDisplay
 
 
 class PerformanceEvaluator:
+    
     def __init__(self, proba, threshold, y_true, X, model):
         self.proba = proba
+        self.positive_proba = [x[1] for x in proba]
         self.threshold = threshold
         self.y_true = y_true
         self.y_pred = self.get_pred()
         self.X = X
         self.model = model
+
     
     def get_pred(self):
-        return np.array([1 if x > self.threshold else 0 for x in self.proba])
+        return np.array([1 if x > self.threshold else 0 for x in self.positive_proba])
     
     def get_dist_plot(self):
-        chart_df = pd.DataFrame(self.proba)
+        chart_df = pd.DataFrame(self.positive_proba)
         chart_df.columns = ["proba"]
         return px.histogram(chart_df, x="proba",
                             title="Prediction Distribution")
@@ -37,32 +38,55 @@ class PerformanceEvaluator:
             "f1_score": skl.f1_score(self.y_true, self.y_pred)
             }
 
-
     def get_roc_curve(self):
-        fpr, tpr, thresholds = skl.roc_curve(self.y_true, self.proba)
+        fpr, tpr, thresholds = skl.roc_curve(self.y_true, self.positive_proba)
         plt.plot(fpr, tpr)
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
         
     def get_pr_curve(self):
-        precision, recall, thres = skl.precision_recall_curve(self.y_true, self.proba)
+        precision, recall, thres = skl.precision_recall_curve(self.y_true, self.positive_proba)
         plt.plot(recall, precision, label="Precison-recall curve")
 
+    def cal_auc(self):
+        precision, recall, thres = skl.precision_recall_curve(self.y_true, self.positive_proba)
+        return {
+            "ROCAUC": skl.roc_auc_score(self.y_true, self.positive_proba),
+            "PRAUC": skl.auc(recall, precision)
+        }
 
-    def get_auc(self):
-        fpr, tpr, thresholds = skl.roc_curve(self.y_true, self.proba)
-        return skl.auc(fpr, tpr)
-
-
-    def cal_normalized_gini(self):
-        """Simple normalized Gini based on Scikit-Learn's roc_auc_score"""
-        gini = lambda a, p: 2 * skl.roc_auc_score(a, p) - 1
-        return gini(self.y_true, self.y_pred) / gini(self.y_true, self.y_true)
+    def cal_gini(self):
+        """Calculate GINI index for class and attributes"""  
+        def _gini_impurity (value_counts):
+            n = value_counts.sum()
+            p_sum = 0
+            for key in value_counts.keys():
+                p_sum = p_sum  +  (value_counts[key] / n ) * (value_counts[key] / n ) 
+            gini = 1 - p_sum
+            return gini
+        
+        def _gini_attribute(attribute_name):
+            attribute_values = self.X[attribute_name].value_counts()
+            gini_A = 0 
+            for key in attribute_values.keys():
+                df_k = pd.DataFrame(self.y_true)[self.X[attribute_name] == key].value_counts()
+                n_k = attribute_values[key]
+                n = self.X.shape[0]
+                gini_A = gini_A + (( n_k / n) * _gini_impurity(df_k))
+            return gini_A
+        
+        result = {"CLASS": _gini_impurity(pd.DataFrame(self.y_true).value_counts())}
+        for key in (self.X).columns:
+            result[key] = _gini_attribute(key)
+        
+        return result
     
     def get_lift_chart(self):
-        skp.metrics.plot_lift_curve(
-            self.y_true, self.X, figsize=(12, 8), title_fontsize=20, text_fontsize=18)
+        skp.metrics.plot_lift_curve(self.y_true, self.proba)
         plt.show()
         
     def get_partial_dependence(self):
-        PartialDependenceDisplay.from_estimator(self.model, self.X, features=['SEX'])
+        n_cols = 5
+#         fig, ax = plt.subplots(figsize=(14,14))
+        PartialDependenceDisplay.from_estimator(self.model, self.X, features=self.X.columns, n_cols=n_cols)
+        
