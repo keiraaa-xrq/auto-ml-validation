@@ -38,6 +38,10 @@ class AbstractBinaryClassifier(ABC):
     def name(self):
         return self._name
 
+    @property
+    def model(self):
+        return self._model
+
     def _verbose_print(self, msg: str):
         """
         Print the message if in verbose mode.

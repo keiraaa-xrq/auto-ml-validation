@@ -1,5 +1,7 @@
 from typing import *
 import time
+import json
+import os
 import pandas as pd
 from joblib import Parallel, delayed
 from .algorithms.abstract_binary_classifier import AbstractBinaryClassifier
@@ -9,6 +11,25 @@ from .algorithms.logistic_regression import LogisticClassifier
 from .algorithms.random_forest import RFClassifier
 from .algorithms.xgboost import XGBoostClassifier
 from .algorithms.support_vector_machine import SVClassifier
+from .feature_selection.feat_selection import AutoFeatureSelector
+
+
+def select_features(
+    clf: AbstractBinaryClassifier,
+    X_train: pd.DataFrame,
+    y_train: pd.DataFrame,
+    metric: str,
+    n_jobs: int,
+) -> List[str]:
+    """
+    Return the names of the selected features for a clf.
+    """
+
+    feature_selector = AutoFeatureSelector(
+        task="binary_classification", keep=None, method='auto')
+    selected, num_selected = feature_selector.generate_best_feats(
+        X_train, y_train, clf.model, metric, n_jobs, verbose=0)
+    return selected
 
 
 def fit_model(
@@ -19,17 +40,30 @@ def fit_model(
     y_val: pd.Series,
     metric: str,
     n_jobs: int,
-) -> Tuple[AbstractBinaryClassifier, float, float, float]:
+    verbose: bool = True
+) -> Tuple[AbstractBinaryClassifier, float, float, float, List[str]]:
     """
     Perform hyperparameter tuning and threshold optimisation.
     """
     start = time.time()
-    clf.random_search(X_train, y_train, metric, n_jobs=n_jobs, verbose=0)
+    # select features
+    if verbose:
+        print(f'Selecting features for {clf.name}.')
+    features_selected = select_features(
+        clf, X_train, y_train, metric, n_jobs)
+    train_selected = X_train[features_selected]
+    val_selected = X_val[features_selected]
+    # training with hyperparameter tuning
+    if verbose:
+        print(f'Training {clf.name}.')
+    clf.random_search(train_selected, y_train, metric,
+                      n_jobs=n_jobs, verbose=0)
+    # adjust threshold
     best_threshold, max_score = clf.optimise_threshold(
-        X_val, y_val, metric, verbose=0)
+        val_selected, y_val, metric, verbose=0)
     end = time.time()
     dur = (end - start) / 60
-    return clf, best_threshold, max_score, dur
+    return clf, best_threshold, max_score, dur, features_selected
 
 
 def instantiate_clfs(n_sample: int) -> List[AbstractBinaryClassifier]:
@@ -44,7 +78,7 @@ def instantiate_clfs(n_sample: int) -> List[AbstractBinaryClassifier]:
     svc = SVClassifier()
     if n_sample < 10000:
         clfs = [dt, knn, lg, rf, xgb, svc]
-    elif n_sample < 25000:
+    elif n_sample < 20000:
         clfs = [dt, knn, lg, rf, xgb]
     else:
         clfs = [dt, lg, rf, xgb]
@@ -52,22 +86,27 @@ def instantiate_clfs(n_sample: int) -> List[AbstractBinaryClassifier]:
 
 
 def compare_performance(
-    results: List[Tuple[AbstractBinaryClassifier, float, float, float]],
+    results: List[Tuple[AbstractBinaryClassifier, float, float, float, List[str]]],
     metric: str,
-    verbose: True
+    verbose: bool = True
 ) -> Tuple[str, Dict]:
+    """
+    Select the best classifier based on the results from fit_model.
+    """
+
     output = {}
     best_clf_name, best_threshold, best_score = None, -1, -1
     for result in results:
-        clf, threshold, score, dur = result
+        clf, threshold, score, dur, features_selected = result
         if verbose:
             print(
-                f'Model: {clf.name}; threshold: {threshold}; {metric}: {score}; time taken: {dur:.2f} mins.')
+                f'Model: {clf.name}; threshold: {threshold}; {metric}: {score}; time taken: {dur:.2f} mins; number of features: {len(features_selected)}.')
         output[clf.name] = {
             'model': clf,
             'best_threshold': threshold,
             f'best_{metric}': score,
-            'running_time': dur
+            'running_time': dur,
+            'features_selected': features_selected
         }
         if score > best_score:
             best_score = score
@@ -87,7 +126,7 @@ def auto_benchmark(
     metric: str,
     n_jobs: int = -1,
     mode: str = 'parallel',
-    verbose: bool = True
+    verbose: bool = True,
 ) -> Tuple[str, Dict]:
     """
     Create benchmark models and return the best performing one.
@@ -103,14 +142,31 @@ def auto_benchmark(
         print('Number of classifiers: ', len(clfs))
     if mode == 'parallel':
         results = Parallel(n_jobs=-1)(
-            delayed(fit_model)(clf, X_train, y_train, X_val, y_val, metric, n_jobs) for clf in clfs
+            delayed(fit_model)(clf, X_train, y_train, X_val, y_val, metric, n_jobs, verbose) for clf in clfs
         )
     else:
         results = []
         for clf in clfs:
             result = fit_model(clf, X_train, y_train,
-                               X_val, y_val, metric, n_jobs)
+                               X_val, y_val, metric, n_jobs, verbose)
             results.append(result)
     best_clf_name, output = compare_performance(
         results, metric, verbose=verbose)
     return best_clf_name, output
+
+
+def save_benchmark_output(output: Dict, models_dir: str, result_path: str):
+    """
+    Save the trained models and benchmarking output from auto_benchmark.
+    """
+    # check if models_dir is a directory
+    if not os.path.isdir(models_dir):
+        raise OSError(f'{models_dir} is not a valid directory.')
+
+    results_dict = {}
+    for name, result in output.items():
+        clf = result.pop('model')
+        clf.save_model(f'{models_dir}/{name}.pkl')
+        results_dict[name] = result
+    with open(result_path, 'w') as fp:
+        json.dump(results_dict, fp)
