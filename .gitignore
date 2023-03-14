@@ -2,7 +2,6 @@
 tests
 notebooks
 experiments
-data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -133,3 +132,13 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# System generated file
+.DS_Store
+data/.DS_Store
+auto_ml_validation/.DS_Store
+
+# System generated file
+.DS_Store
+data/.DS_Store
+auto_ml_validation/.DS_Store

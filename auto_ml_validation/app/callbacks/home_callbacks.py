@@ -1,0 +1,143 @@
+# Landing Page Callbacks
+from auto_ml_validation.app.index import app
+from auto_ml_validation.app.pages.home import *
+
+import pandas as pd
+import io
+import base64
+import json
+import dash
+import dash_bootstrap_components as dbc
+from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
+##################### Variables Config #####################
+# Map algorithms to their hyperparameters
+
+
+# Body Content
+form, submit_button = project_field()
+
+# LayOut
+home_layout = html.Div([
+    form,
+    submit_button
+])
+
+
+# Callback
+# Save Project Config and Show Input Forms
+@app.callback(
+    [Output('store-project','data'),Output('user-input','children')],
+    [Input("project-name", "value"), Input("model-dropdown", "value"),
+    Input('submit-button','n_clicks')]
+    )
+
+def generate_hyperparams(project_name, algo_value, n_clicks):
+    project_config = {'Project Name': project_name, 'Algorithm': algo_value}
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return [], None
+    trigger_id = ctx.triggered[0]['prop_id']
+    #hyperparams = algorithm_params.get(algo_value)
+    if trigger_id == 'model-dropdown.value':
+        return project_config, rep_dataset_layout()
+    elif trigger_id == 'submit-button.n_clicks':
+        if n_clicks == 1:
+            return project_config, auto_dataset_layout()
+        if n_clicks == 2:
+            return # should be result pages
+            
+    else:
+        return [], None
+    
+# Define the callback to change the button label
+@app.callback(
+    Output('submit-button', 'children'),
+    [Input('submit-button', 'n_clicks')]
+)
+def update_button_label(n_clicks):
+    if n_clicks == 1:
+        return 'Test'
+    else:
+        return 'OK'
+    
+
+# Update File Paths in input text box for Replicating Model
+@app.callback(
+    [Output('hyperparams-input', 'value'),
+    Output('train-dataset-input', 'value'),
+    Output('test-dataset-input', 'value'),
+    Output('other-dataset-input', 'value')],
+    [Input('hyperparams-upload', 'contents'),
+    Input('train-dataset-upload', 'contents'),
+    Input('test-dataset-upload', 'contents'),
+    Input('other-dataset-upload', 'contents')],
+    [State('hyperparams-upload', 'filename'),
+    State('train-dataset-upload', 'filename'),
+    State('test-dataset-upload', 'filename'),
+    State('other-dataset-upload', 'filename')]
+)
+def update_dataset_inputs(hyperparams_contents, train_contents, test_contents, other_contents, hyperparams_filename, train_filename, test_filename, other_filename):
+    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+    if 'hyperparams-upload' in changed_id and hyperparams_contents is not None:
+        return hyperparams_filename, dash.no_update, dash.no_update, dash.no_update
+    elif 'train-dataset-upload' in changed_id and train_contents is not None:
+        return dash.no_update, train_filename, dash.no_update, dash.no_update
+    elif 'test-dataset-upload' in changed_id and test_contents is not None:
+        return dash.no_update, dash.no_update, test_filename, dash.no_update
+    elif 'other-dataset-upload' in changed_id and other_contents is not None:
+        return dash.no_update, dash.no_update, dash.no_update, other_filename
+    else:
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    
+# Save Data and Configure Input Variables
+@app.callback(
+    Output('store-rep-data', 'data'),
+    Input('submit-button', 'n_clicks'),
+    [State('hyperparams-upload', 'contents'), State('hyperparams-upload', 'filename'),
+    State('train-dataset-upload', 'contents'), State('train-dataset-upload', 'filename'),
+    State('test-dataset-upload', 'contents'), State('test-dataset-upload', 'filename'),
+    State('other-dataset-upload', 'contents'), State('other-dataset-upload', 'filename'),
+    State('target-var-input', 'value'), 
+    State('cat-var-input', 'value')],
+    prevent_initial_call=True
+)
+def save_rep_data(n_clicks, hyperparams_contents, hyperparams_filename, train_contents, train_filename, test_contents, test_filename, other_contents, other_filename, target, cat_var):
+    if not n_clicks:
+        raise PreventUpdate
+    ctx = dash.callback_context
+    if ctx.triggered[0]['prop_id'] == 'submit-button.n_clicks':
+        rep_data = {}
+        if hyperparams_contents is not None:
+            rep_data['Hyperparams'] = parse_data(hyperparams_contents, hyperparams_filename)
+        if train_contents is not None:
+            rep_data['Train Data'] = parse_data(train_contents, train_filename)
+        if test_contents is not None:
+            rep_data['Test Data'] = parse_data(test_contents, test_filename)
+        if other_contents is not None:
+            rep_data['Other Data'] = parse_data(other_contents, other_filename)
+        rep_data['Target'] = target
+        rep_data['Categorical Var'] = cat_var
+        return [rep_data]
+    else:
+        raise PreventUpdate
+
+def parse_data(content, filename):
+    """Helper function to parse data in format of csv/xls/txt into pandas dataframe
+    Args:
+        content (_type_): file content
+        filename (_type_): file name
+    Returns:
+        dat: Dictionary or train/test/other dataframe
+    """
+    content_type, content_string = content.split(',')
+    decoded = base64.b64decode(content_string)
+    if 'json' in filename:
+        dat = json.loads(decoded)
+    if "csv" in filename:
+        dat = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+    elif "xls" in filename:
+        dat = pd.read_excel(io.BytesIO(decoded))
+    elif "txt" or "tsv" in filename:
+        dat = pd.read_csv(io.StringIO(decoded.decode("utf-8")), delimiter=r"\s+")
+    return dat
