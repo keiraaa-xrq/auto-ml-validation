@@ -180,7 +180,7 @@ def auto_dataset_layout() -> html.Div:
                         {'label': 'Precision', 'value': 'precision'},
                         {'label': 'Accuracy', 'value': 'accuracy'},
                         {'label': 'Recall', 'value': 'recall'},
-                        {'label': 'R-Squared', 'value': 'r_squared'}
+                        {'label': 'AUC-ROC', 'value': 'aucroc'}
                     ],
                     value='f1'
                 ),

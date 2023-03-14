@@ -10,9 +10,6 @@ import dash
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
-##################### Variables Config #####################
-# Map algorithms to their hyperparameters
-
 
 # Body Content
 form, submit_button = project_field()
