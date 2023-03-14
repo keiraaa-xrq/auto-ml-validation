@@ -89,7 +89,7 @@ class AutoFeatureSelector(BaseEstimator):
                 predictors, target)
         elif self.method == 'greedy':
             feats_selected_, num_features = self._feature_select_greedy(
-                predictors, target, model, scoring_method, n_jobs)
+                predictors, target, model, scoring_method, n_jobs, verbose)
         elif self.method == 'filter':
             feats_selected_, num_features = self._feature_select_filter(
                 predictors, target)

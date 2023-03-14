@@ -20,6 +20,7 @@ def select_features(
     y_train: pd.DataFrame,
     metric: str,
     n_jobs: int,
+    verbose: int = 1
 ) -> List[str]:
     """
     Return the names of the selected features for a clf.
@@ -28,7 +29,7 @@ def select_features(
     feature_selector = AutoFeatureSelector(
         task="binary_classification", keep=None, method='auto')
     selected, num_selected = feature_selector.generate_best_feats(
-        X_train, y_train, clf.model, metric, n_jobs, verbose=0)
+        X_train, y_train, clf.model, metric, n_jobs, verbose=verbose)
     return selected
 
 
@@ -40,7 +41,7 @@ def fit_model(
     y_val: pd.Series,
     metric: str,
     n_jobs: int,
-    verbose: bool = True
+    verbose: int = 1
 ) -> Tuple[AbstractBinaryClassifier, float, float, float, List[str]]:
     """
     Perform hyperparameter tuning and threshold optimisation.
@@ -50,14 +51,17 @@ def fit_model(
     if verbose:
         print(f'Selecting features for {clf.name}.')
     features_selected = select_features(
-        clf, X_train, y_train, metric, n_jobs)
+        clf, X_train, y_train, metric, n_jobs=n_jobs, verbose=verbose)
     train_selected = X_train[features_selected]
     val_selected = X_val[features_selected]
+    mid = time.time()
+    fs_dur = (mid - start) / 60
     # training with hyperparameter tuning
     if verbose:
-        print(f'Training {clf.name}.')
+        print(
+            f'Compeleted feature selection for {clf.name} in {fs_dur} mins. Start training.')
     clf.random_search(train_selected, y_train, metric,
-                      n_jobs=n_jobs, verbose=0)
+                      n_jobs=n_jobs, verbose=verbose)
     # adjust threshold
     best_threshold, max_score = clf.optimise_threshold(
         val_selected, y_val, metric, verbose=0)
