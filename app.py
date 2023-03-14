@@ -17,6 +17,8 @@ content = html.Div(id='page-content', children=[])
 
 ########################## Callback ##########################
 # Callback to show home page when the app is loaded
+
+
 @app.callback(Output("page-content", "children"),
               [Input("url", "pathname")])
 def display_page(pathname):
@@ -29,13 +31,13 @@ def display_page(pathname):
     
 
 
+
 ########################## Layout ##########################
 app.layout = html.Div([dcc.Location(id='url', refresh=False, pathname='/home'),
-    navbar,
-    content
-])
-
+                       navbar,
+                       content
+                       ])
 
 
 if __name__ == '__main__':
-	app.run_server(debug=False)
+    app.run_server(debug=False)
