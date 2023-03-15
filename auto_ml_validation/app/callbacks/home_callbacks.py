@@ -161,8 +161,7 @@ def update_dropdowns(contents, filename):
             return [], []
         
         # Process the data to get options for dropdowns
-        target_var_options = [{'label': col, 'value': col} for col in df.columns]
-        cat_var_options = [{'label': col, 'value': col} for col in df.select_dtypes(include=['object']).columns]
+        target_var_options = cat_var_options = [{'label': col, 'value': col} for col in df.columns]
         
         return target_var_options, cat_var_options
     
