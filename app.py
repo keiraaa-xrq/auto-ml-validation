@@ -33,7 +33,7 @@ def display_page(pathname):
 
 
 ########################## Layout ##########################
-app.layout = html.Div([dcc.Location(id='url', refresh=False, pathname='/home'),
+app.layout = html.Div([dcc.Location(id='url', refresh=False, pathname='/results'),
                        navbar,
                        content
                        ])
