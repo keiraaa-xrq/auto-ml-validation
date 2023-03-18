@@ -2,8 +2,10 @@ import pandas as pd
 import sklearn.metrics as skl
 import numpy as np
 import plotly.express as px
-import scikitplot as skp
+# import scikitplot as skp
 from sklearn.inspection import PartialDependenceDisplay
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from typing import Optional
 
 
 class PerformanceEvaluator:
@@ -28,7 +30,8 @@ class PerformanceEvaluator:
                             title="Prediction Distribution")
     
     def get_confusion_matrix(self):
-        return skl.confusion_matrix(self.y_true, self.y_pred)
+        return ConfusionMatrixDisplay.from_predictions(self.y_true, self.get_pred(), 
+                                                       cmap='Oranges')
 
     def cal_metrics(self) -> float:
         return {
@@ -89,10 +92,12 @@ class PerformanceEvaluator:
         
         return result
     
-    def get_lift_chart(self):
-        return skp.metrics.plot_lift_curve(self.y_true, self.proba)
+    # def get_lift_chart(self):
+    #     return skp.metrics.plot_lift_curve(self.y_true, self.proba)
         
-    def get_partial_dependence(self):
+    def get_partial_dependence(self, feature: Optional[str]):
+        if feature is None:
+            feature = self.X.columns
         n_cols = 5
-        PartialDependenceDisplay.from_estimator(self.model, self.X, features=self.X.columns, n_cols=n_cols)
+        PartialDependenceDisplay.from_estimator(self.model, self.X, features=feature, n_cols=n_cols)
         
