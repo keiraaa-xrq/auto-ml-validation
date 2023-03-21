@@ -1,6 +1,7 @@
 import math
 import pandas as pd
 import numpy as np
+from scipy.stats import ks_2samp
 
 class StatisticalMetricsEvaluator:
     def __init__(self,
@@ -45,8 +46,8 @@ class StatisticalMetricsEvaluator:
     def csi_for_each_feature(self,
                          ft_name: str,
                          num_bins=10):
-        lower_range = min(min(train_set[ft_name]), min(test_set[ft_name]))
-        upper_range = max(max(train_set[ft_name]), max(test_set[ft_name]))
+        lower_range = min(min(self.train[ft_name]), min(self.test[ft_name]))
+        upper_range = max(max(self.train[ft_name]), max(self.test[ft_name]))
         
         bin_list = np.arange(lower_range, 
                             upper_range+(upper_range-lower_range)/num_bins, 
@@ -91,4 +92,4 @@ class StatisticalMetricsEvaluator:
     
     def kstest(self,
                score_col_name: str)-> float:
-        return ks_2samp(self.train['score_col_name'], self.test['score_col_name'])
+        return ks_2samp(self.processed_train[score_col_name], self.processed_test[score_col_name])
