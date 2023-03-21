@@ -99,13 +99,13 @@ def compare_performance(
     results: List[Tuple[AbstractBinaryClassifier, float, float, float, List[str]]],
     metric: str,
     verbose: bool = True
-) -> Tuple[str, Dict]:
+) -> Tuple[AbstractBinaryClassifier, Dict]:
     """
     Select the best classifier based on the results from fit_model.
     """
 
     output = {}
-    best_clf_name, best_threshold, best_score = None, -1, -1
+    best_clf, best_threshold, best_score = None, -1, -1
     for result in results:
         clf, threshold, score, dur, features_selected = result
         if verbose:
@@ -121,11 +121,11 @@ def compare_performance(
         if score > best_score:
             best_score = score
             best_threshold = threshold
-            best_clf_name = clf.name
+            best_clf = clf
     if verbose:
         print(
-            f"Best model is {best_clf_name} with {metric} of {best_score} at a threshold of {best_threshold}.")
-    return best_clf_name, output
+            f"Best model is {best_clf.name} with {metric} of {best_score} at a threshold of {best_threshold}.")
+    return best_clf, output
 
 
 def auto_benchmark(
@@ -167,9 +167,9 @@ def auto_benchmark(
             result = fit_model(clf, X_train, y_train, X_val,
                                y_val, metric, feature_selection, n_jobs, verbose)
             results.append(result)
-    best_clf_name, output = compare_performance(
+    best_clf, output = compare_performance(
         results, metric, verbose=verbose)
-    return best_clf_name, output
+    return best_clf, output
 
 
 def save_benchmark_output(output: Dict, models_dir: str, result_path: str):
@@ -182,6 +182,7 @@ def save_benchmark_output(output: Dict, models_dir: str, result_path: str):
 
     results_dict = {}
     for name, result in output.items():
+        result = result.copy()
         clf = result.pop('model')
         clf.save_model(f'{models_dir}/{name}.pkl')
         results_dict[name] = result
