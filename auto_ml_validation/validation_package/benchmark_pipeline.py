@@ -40,6 +40,7 @@ def fit_model(
     X_val: pd.DataFrame,
     y_val: pd.Series,
     metric: str,
+    feature_selection: bool,
     n_jobs: int,
     verbose: int = 1
 ) -> Tuple[AbstractBinaryClassifier, float, float, float, List[str]]:
@@ -47,19 +48,24 @@ def fit_model(
     Perform hyperparameter tuning and threshold optimisation.
     """
     start = time.time()
-    # select features
-    if verbose:
-        print(f'Selecting features for {clf.name}.')
-    features_selected = select_features(
-        clf, X_train, y_train, metric, n_jobs=n_jobs, verbose=verbose)
+    if feature_selection:
+        # select features
+        if verbose:
+            print(f'Selecting features for {clf.name}.')
+        features_selected = select_features(
+            clf, X_train, y_train, metric, n_jobs=n_jobs, verbose=verbose)
+        mid = time.time()
+        fs_dur = (mid - start) / 60
+        if verbose:
+            print(
+                f'Compeleted feature selection for {clf.name} in {fs_dur} mins.')
+    else:
+        features_selected = X_train.columns.tolist()
     train_selected = X_train[features_selected]
     val_selected = X_val[features_selected]
-    mid = time.time()
-    fs_dur = (mid - start) / 60
     # training with hyperparameter tuning
     if verbose:
-        print(
-            f'Compeleted feature selection for {clf.name} in {fs_dur} mins. Start training.')
+        print(f'Training {clf.name}.')
     clf.random_search(train_selected, y_train, metric,
                       n_jobs=n_jobs, verbose=verbose)
     # adjust threshold
@@ -82,7 +88,7 @@ def instantiate_clfs(n_sample: int) -> List[AbstractBinaryClassifier]:
     svc = SVClassifier()
     if n_sample < 10000:
         clfs = [dt, knn, lg, rf, xgb, svc]
-    elif n_sample < 20000:
+    elif n_sample < 15000:
         clfs = [dt, knn, lg, rf, xgb]
     else:
         clfs = [dt, lg, rf, xgb]
@@ -128,6 +134,7 @@ def auto_benchmark(
     X_val: pd.DataFrame,
     y_val: pd.Series,
     metric: str,
+    feature_selection: bool,
     n_jobs: int = -1,
     mode: str = 'parallel',
     verbose: bool = True,
@@ -146,13 +153,13 @@ def auto_benchmark(
         print('Number of classifiers: ', len(clfs))
     if mode == 'parallel':
         results = Parallel(n_jobs=-1)(
-            delayed(fit_model)(clf, X_train, y_train, X_val, y_val, metric, n_jobs, verbose) for clf in clfs
+            delayed(fit_model)(clf, X_train, y_train, X_val, y_val, metric, feature_selection, n_jobs, verbose) for clf in clfs
         )
     else:
         results = []
         for clf in clfs:
-            result = fit_model(clf, X_train, y_train,
-                               X_val, y_val, metric, n_jobs, verbose)
+            result = fit_model(clf, X_train, y_train, X_val,
+                               y_val, metric, feature_selection, n_jobs, verbose)
             results.append(result)
     best_clf_name, output = compare_performance(
         results, metric, verbose=verbose)
