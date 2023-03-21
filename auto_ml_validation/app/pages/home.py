@@ -61,12 +61,8 @@ def project_field():
             )
         ])
     ,
-    # Variables Storing
+    
         html.Div(id='user-input'),
-        dcc.Store(id='store-project', data={}, storage_type='memory'), # Dictionary of Project Config {project name: value, algorithm: value}
-        dcc.Store(id='hyperparams-value', data = {}), # Dictionary of Hyperparameters {hyperparameter: value}
-        dcc.Store(id='store-rep-data', data = {}),
-        
         ]
 
     form = dbc.Form(form_fields, id="form")
@@ -79,30 +75,6 @@ def project_field():
     
     return form, submit_button
 
-
-
-
-def params_layout(hyperparams) -> html.Div:
-    """This function renders the hyperparameters form page based on algorithm selected. This is for replicating the model.
-    Args:
-        hyperparams (list): hyperparameters to tune/train (replicate) on
-    Returns:
-        html.Div: html element consisting of form input for user
-    """
-    inputs = []
-    for param in hyperparams:
-        inputs.append(html.Div([
-            html.Label(f"{param.capitalize()}:  "),
-            dcc.Input(id=f"{param}-input", type='text', value='', style={'display': 'flex', 'flex-direction': 'column', "margin": "auto"}),
-        ]))
-    
-    return html.Div(id='hyperparams-input', children=[
-        html.Div([
-            html.P("Please input model hyperparameters:")
-        ] + inputs, 
-            style=container_style
-        )
-        ])
     
 def rep_dataset_layout() -> html.Div:
     """This function renders the datasets form input page together with the fields (Target and Categorical Variable) after the user clicks OK (For Replicating the Model)
@@ -178,9 +150,9 @@ def rep_dataset_layout() -> html.Div:
             # Text Fields
             html.Div([
             html.P('Please indicate the target variable name:'),
-            dcc.Input(id='target-var-input', type='text', value='', style={'width': '100%'}),
+            dcc.Dropdown(id='target-var-input', value='', options = [], style={'width': '100%'}),
             html.P('Please indicate all categorical variables:'),
-            dcc.Input(id='cat-var-input', type='text', value='', style={'width': '100%'})
+            dcc.Dropdown(id='cat-var-input', value='', options = [], multi=True, style={'width': '100%'})
             ], style={'textAlign': 'center', 'margin': 'auto', 'maxWidth': '800px', 'paddingTop': '50px'})
             ],
         style=container_style
@@ -208,7 +180,7 @@ def auto_dataset_layout() -> html.Div:
                         {'label': 'Precision', 'value': 'precision'},
                         {'label': 'Accuracy', 'value': 'accuracy'},
                         {'label': 'Recall', 'value': 'recall'},
-                        {'label': 'R-Squared', 'value': 'r_squared'}
+                        {'label': 'AUC-ROC', 'value': 'aucroc'}
                     ],
                     value='f1'
                 ),

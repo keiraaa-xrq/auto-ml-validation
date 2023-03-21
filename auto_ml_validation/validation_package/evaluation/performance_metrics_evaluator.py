@@ -1,9 +1,9 @@
 import sklearn.metrics as skl
 import numpy as np
-import matplotlib.pyplot as plt
 import plotly.express as px
 import scikitplot as skp
 from sklearn.inspection import PartialDependenceDisplay
+from typing import Optional
 
 
 class PerformanceEvaluator:
@@ -40,13 +40,11 @@ class PerformanceEvaluator:
 
     def get_roc_curve(self):
         fpr, tpr, thresholds = skl.roc_curve(self.y_true, self.positive_proba)
-        plt.plot(fpr, tpr)
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
+        
         
     def get_pr_curve(self):
         precision, recall, thres = skl.precision_recall_curve(self.y_true, self.positive_proba)
-        plt.plot(recall, precision, label="Precison-recall curve")
+        
 
     def cal_auc(self):
         precision, recall, thres = skl.precision_recall_curve(self.y_true, self.positive_proba)
@@ -81,12 +79,13 @@ class PerformanceEvaluator:
         
         return result
     
-    def get_lift_chart(self):
-        skp.metrics.plot_lift_curve(self.y_true, self.proba)
-        plt.show()
+    # def get_lift_chart(self):
+    #     skp.metrics.plot_lift_curve(self.y_true, self.proba)
+    #     plt.show()
         
-    def get_partial_dependence(self):
+    def get_partial_dependence(self, feature: Optional[str]):
+        if feature is None:
+            feature = self.X.columns
         n_cols = 5
-#         fig, ax = plt.subplots(figsize=(14,14))
-        PartialDependenceDisplay.from_estimator(self.model, self.X, features=self.X.columns, n_cols=n_cols)
+        PartialDependenceDisplay.from_estimator(self.model, self.X, features=feature, n_cols=n_cols)
         
