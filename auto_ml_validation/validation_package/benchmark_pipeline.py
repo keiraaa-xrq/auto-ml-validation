@@ -142,10 +142,16 @@ def auto_benchmark(
     """
     Create benchmark models and return the best performing one.
     """
+    # check input validity
+    metrics = {'accuracy', 'f1', 'precision', 'recall', 'roc_auc'}
+    if metric not in metrics:
+        raise ValueError(
+            f'Invalid metric: {metric}. Please choose from {metrics}.')
     modes = {'sequential', 'parallel'}
     if mode not in modes:
         raise ValueError(
             f'Invalid mode: {mode}. Please choose from "sequential" or "parallel".')
+
     n_sample = X_train.shape[0]
     # instantiate clfs
     clfs = instantiate_clfs(n_sample)

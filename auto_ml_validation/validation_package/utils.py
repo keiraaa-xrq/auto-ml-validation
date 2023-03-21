@@ -28,6 +28,7 @@ def instantiate_clf(
     algo: str,
     params: Dict,
 ) -> AbstractBinaryClassifier:
+    algos = {'dt', 'knn', 'logistic', 'rf', 'svm', 'xgboost'}
     if algo == 'dt':
         clf = DTClassifier(params)
     elif algo == 'knn':
@@ -41,5 +42,6 @@ def instantiate_clf(
     elif algo == 'xgboost':
         clf = XGBoostClassifier(params)
     else:
-        raise ValueError(f'Invalid algo name: {algo}')
+        raise ValueError(
+            f'Invalid algo name: {algo}. Please select from {algos}.')
     return clf
