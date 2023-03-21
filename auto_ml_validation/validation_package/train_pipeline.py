@@ -7,7 +7,7 @@ import numpy as np
 from .utils import instantiate_clf
 
 
-def train_pipeline(
+def train(
     X_train: pd.DataFrame,
     y_train: pd.Series,
     X_others: List[pd.DataFrame],
