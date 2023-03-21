@@ -4,7 +4,7 @@
 from typing import *
 import pandas as pd
 import numpy as np
-from .utils import instantiate_clf
+from .utils.utils import instantiate_clf
 
 
 def train(

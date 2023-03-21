@@ -12,6 +12,7 @@ from .algorithms.random_forest import RFClassifier
 from .algorithms.xgboost import XGBoostClassifier
 from .algorithms.support_vector_machine import SVClassifier
 from .feature_selection.feat_selection import AutoFeatureSelector
+from .utils.np_encoder import NpEncoder
 
 
 def select_features(
@@ -115,6 +116,7 @@ def compare_performance(
             'model': clf,
             'best_threshold': threshold,
             f'best_{metric}': score,
+            'hyperparameters': clf.get_params(),
             'running_time': dur,
             'features_selected': features_selected
         }
@@ -186,5 +188,9 @@ def save_benchmark_output(output: Dict, models_dir: str, result_path: str):
         clf = result.pop('model')
         clf.save_model(f'{models_dir}/{name}.pkl')
         results_dict[name] = result
-    with open(result_path, 'w') as fp:
-        json.dump(results_dict, fp)
+    try:
+        with open(result_path, 'w') as fp:
+            json.dump(results_dict, fp, cls=NpEncoder)
+    except Exception as e:
+        print('Error:', e)
+        print(results_dict)

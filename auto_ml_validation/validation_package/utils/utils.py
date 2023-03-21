@@ -1,12 +1,12 @@
 from typing import *
 import pandas as pd
-from .algorithms.abstract_binary_classifier import AbstractBinaryClassifier
-from .algorithms.decision_tree import DTClassifier
-from .algorithms.knn import KNNClassifier
-from .algorithms.logistic_regression import LogisticClassifier
-from .algorithms.random_forest import RFClassifier
-from .algorithms.support_vector_machine import SVClassifier
-from .algorithms.xgboost import XGBoostClassifier
+from ..algorithms.abstract_binary_classifier import AbstractBinaryClassifier
+from ..algorithms.decision_tree import DTClassifier
+from ..algorithms.knn import KNNClassifier
+from ..algorithms.logistic_regression import LogisticClassifier
+from ..algorithms.random_forest import RFClassifier
+from ..algorithms.support_vector_machine import SVClassifier
+from ..algorithms.xgboost import XGBoostClassifier
 
 
 def check_columns(data: pd.DataFrame, columns: List[str]):

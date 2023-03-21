@@ -1,7 +1,7 @@
 from typing import *
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from .utils import check_columns
+from .utils.utils import check_columns
 
 
 def split_x_y(
