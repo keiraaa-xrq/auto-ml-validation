@@ -1,6 +1,5 @@
 """Replicate model training
 """
-
 from typing import *
 import pandas as pd
 import numpy as np

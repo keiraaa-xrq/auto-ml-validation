@@ -1,6 +1,8 @@
 # Landing Page Callbacks
 from auto_ml_validation.app.index import app
 from auto_ml_validation.app.pages.home import *
+from auto_ml_validation.validation_package import train_pipeline
+from auto_ml_validation.validation_package import benchmark_pipeline
 
 import pandas as pd
 import io
@@ -13,53 +15,31 @@ from dash.exceptions import PreventUpdate
 
 # Body Content
 form, submit_button = project_field()
+rep_layout = rep_dataset_layout()
+auto_layout = auto_dataset_layout()
+loading_layout = loading_div_layout(app)
+
 
 # Layout
 home_layout = html.Div([
+    dcc.Location(id='url', refresh=False, pathname='/home'),
     form,
-    submit_button,   
+    html.Div(children=[rep_layout, auto_layout, submit_button], id='content_div'),
     dcc.Store(id='store-project', data={}, storage_type='memory'), # Dictionary of Project Config {project name: value, algorithm: value}
-    dcc.Store(id='store-rep-data', data = {}), # Dictionary of Replicating Model Data {Hyperparamaters: Value, Train Dataset: Value, Test Dataset: Value, Other Dataset: Value, Target: Value, Categorical Variable: Value}
-    dcc.Store(id='store-auto-data', data = {}), # Dictionary of AutoBenchmarking Model Data {Train Dataset: Value, Test Dataset: Value, Other Dataset: Value, Metric: Value, Auto Feat Selection: Yes/No}
+    dcc.Store(id='store-rep-data', data = {}, storage_type ='session'), # Dictionary of Replicating Model Data {Hyperparamaters: Value, Train Dataset: Value, Test Dataset: Value, Other Dataset: Value, Target: Value, Categorical Variable: Value}
+    dcc.Store(id='store-auto-data', data = {}, storage_type ='session'), # Dictionary of AutoBenchmarking Model Data {Train Dataset: Value, Test Dataset: Value, Other Dataset: Value, Metric: Value, Auto Feat Selection: Yes/No}
 ])
-
 
 # Callback
 # Save Project Config and Show Input Forms
 @app.callback(
-    [Output('store-project','data'),Output('user-input','children')],
-    [Input("project-name", "value"), Input("model-dropdown", "value"),
-    Input('submit-button','n_clicks')]
+    [Output('store-project','data')],
+    [Input("project-name", "value"), Input("model-dropdown", "value")]
     )
 
-def generate_hyperparams(project_name, algo_value, n_clicks):
+def save_proj_dat(project_name, algo_value):
     project_config = {'Project Name': project_name, 'Algorithm': algo_value}
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        return [], None
-    trigger_id = ctx.triggered[0]['prop_id']
-    if trigger_id == 'model-dropdown.value':
-        return project_config, rep_dataset_layout()
-    elif trigger_id == 'submit-button.n_clicks':
-        if n_clicks == 1:
-            return project_config, auto_dataset_layout()
-        if n_clicks == 2:
-            return project_config, dcc.Location(id='url', pathname='/results') # should be result pages
-            
-    else:
-        return [], None
-    
-# Define the callback to change the button label
-@app.callback(
-    Output('submit-button', 'children'),
-    [Input('submit-button', 'n_clicks')]
-)
-def update_button_label(n_clicks):
-    if n_clicks == 1:
-        return 'Test'
-    else:
-        return 'OK'
-    
+    return [json.dumps(project_config)]
 
 # Update File Paths in input text box for Replicating Model
 @app.callback(
@@ -88,7 +68,6 @@ def update_rep_dataset_inputs(hyperparams_contents, train_contents, test_content
         return dash.no_update, dash.no_update, dash.no_update, other_filename
     else:
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update
-
     
 # Save Data and Configure Input Variables (For Replicating)
 @app.callback(
@@ -161,8 +140,7 @@ def update_dropdowns(contents, filename):
             return [], []
         
         # Process the data to get options for dropdowns
-        target_var_options = [{'label': col, 'value': col} for col in df.columns]
-        cat_var_options = [{'label': col, 'value': col} for col in df.select_dtypes(include=['object']).columns]
+        target_var_options = cat_var_options = [{'label': col, 'value': col} for col in df.columns]
         
         return target_var_options, cat_var_options
     
@@ -221,14 +199,50 @@ def update_auto_dataset_inputs(train_contents, test_contents, other_contents, tr
     else:
         return dash.no_update, dash.no_update, dash.no_update
     
-    # callback to update rep-data-output
-@app.callback(Output('rep-data-output', 'children'),
-              [Input('store-rep-data', 'data')])
-def update_rep_data_output(rep_data):
-    return json.dumps(rep_data, indent=2)
+# Callback to validate form, update content_div with loading spinner and starting modeling process when submit_button is clicked
+@app.callback(
+    Output('content_div', 'children'), Output('validation-message', 'children'),
+    Input('submit-button', 'n_clicks'),
+    [State("model-dropdown", "value"),
+     State('train-dataset-upload', 'filename'),
+     State('train-auto-upload', 'filename'),
+     State('test-dataset-upload', 'filename'),
+     State('test-auto-upload', 'filename'),
+     State('target-var-input', 'value'),
+     State('cat-var-input', 'value')
+     ]
+     
+)
+def update_content_div(n_clicks, algorithm, train_rep, train_auto, test_rep, test_auto, target_var, cat_var):
+    if n_clicks:
+        if algorithm is None:
+            return [rep_layout, auto_layout, submit_button], 'Please select an option from the algorithm dropdown.'
+        elif train_rep is None:
+            return [rep_layout, auto_layout, submit_button], 'Please upload the train dataset for replicating the model.'
+        elif train_auto is None:
+            return [rep_layout, auto_layout, submit_button], 'Please upload the train dataset for creating the auto-benchmarking model.'
+        elif test_rep is None:
+            return [rep_layout, auto_layout, submit_button], 'Please upload the test dataset for replicating the model.'
+        elif test_auto is None:
+            return [rep_layout, auto_layout, submit_button], 'Please upload the test dataset for creating the auto-benchmarking model.'
+        elif train_rep is not None and target_var is None:
+            return [rep_layout, auto_layout, submit_button], 'Please select the target variable.'
+        elif train_rep is not None and cat_var is None:
+            return [rep_layout, auto_layout, submit_button], 'Please select the relevant categorical variables.'
+        else:
+        # TO DO: Modelling process
+            return loading_layout, ''
+    else:
+        return [rep_layout, auto_layout, submit_button], ''
 
-# callback to update auto-data-output
-@app.callback(Output('auto-data-output', 'children'),
-              [Input('store-auto-data', 'data')])
-def update_auto_data_output(auto_data):
-    return json.dumps(auto_data, indent=2)
+"""
+# Callback to replicate and auto-benchmark the model, display loading layout and redirect to results page completed
+@app.callback(Output('url', 'pathname'),
+              [Input('submit-button', 'n_clicks')],
+              [State('url', 'pathname')])
+
+def redirect_to_results_page(n_clicks, current_pathname):
+    if n_clicks:
+        return '/results'
+    return current_pathname
+"""
