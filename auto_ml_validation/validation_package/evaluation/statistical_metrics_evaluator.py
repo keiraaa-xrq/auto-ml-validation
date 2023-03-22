@@ -22,9 +22,10 @@ class StatisticalMetricsEvaluator:
         self.test_proba = test_data['pred_proba'][:, 1]
 
     def _generate_output(
-        bin_list: np.ndarray,
+        self,
+        bin_list: List[float],
         train_values: pd.Series,
-        test_values: pd.Series,
+        test_values: pd.Series
     ) -> Tuple[float, pd.DataFrame]:
         """
         Calculate the value and generate output df for psi and csi.
@@ -39,7 +40,7 @@ class StatisticalMetricsEvaluator:
             lambda x: x / sum(test_count))
 
         df_index = [
-            f'({bin_list[i]}, {bin_list[i + 1]}]' for i in range(len(bin_list) - 1)]
+            f'({bin_list[i]:.2f}, {bin_list[i + 1]:.2f}]' for i in range(len(bin_list) - 1)]
         output_df = pd.DataFrame({
             'train_count': train_count,
             'train_perc': train_perc,
@@ -54,8 +55,9 @@ class StatisticalMetricsEvaluator:
             actual = row['train_perc']
             expected = row['test_perc']
             if actual == 0 or expected == 0:
-                continue
-            value = (actual - expected) * math.log(actual / expected)
+                value = 0
+            else:
+                value = (actual - expected) * math.log(actual / expected)
             values.append(value)
             x = x + value
         output_df['index_value'] = values
@@ -64,7 +66,7 @@ class StatisticalMetricsEvaluator:
     def calculate_psi(self, num_bins=10) -> float:
         train_proba = pd.Series(self.train_proba)
         test_proba = pd.Series(self.test_proba)
-        bin_list = np.arange(0, 1+1/num_bins, 1/num_bins)
+        bin_list = np.arange(0, 1+1/num_bins, 1/num_bins).tolist()
         psi, output_df = self._generate_output(
             bin_list,
             train_proba,
@@ -74,7 +76,7 @@ class StatisticalMetricsEvaluator:
 
     def csi_for_single_feature(self, ft_name: str, num_bins=10):
         train_l = self.train_raw_X[ft_name]
-        test_l = self.train_raw_X[ft_name]
+        test_l = self.test_raw_X[ft_name]
         lower = min(min(train_l), min(test_l))
         upper = max(max(train_l), max(test_l))
 
@@ -82,7 +84,8 @@ class StatisticalMetricsEvaluator:
             lower,
             upper + (upper - lower) / num_bins,
             (upper - lower) / num_bins
-        )
+        ).tolist()
+
         csi, output_df = self._generate_output(
             bin_list,
             train_l,
@@ -91,7 +94,7 @@ class StatisticalMetricsEvaluator:
         return csi, output_df
 
     def csi_for_all_features(self, ft_names: List[str], num_bins=10):
-        check_columns(self.train_raw_X, [ft_names])
+        # check_columns(self.train_raw_X, [ft_names])
         df_list = []
         csi_dict = dict()
         for feature in ft_names:
@@ -100,6 +103,8 @@ class StatisticalMetricsEvaluator:
             df_list.append(df)
         return df_list, csi_dict
 
-    def kstest(self,
-               score_col_name: str) -> float:
+    def kstest(
+        self,
+        score_col_name: str
+    ) -> float:
         return scipy.stats.ks_2samp(self.train_processed_X[score_col_name], self.test_processed_X[score_col_name])
