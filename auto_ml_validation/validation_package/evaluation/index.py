@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import List
+from typing import *
 from .fairness_metrics_evaluator import *
 from .performance_metrics_evaluator import *
 from .statistical_metrics_evaluator import *
@@ -7,15 +7,16 @@ from .transparency_metrics_evaluator import *
 
 
 class ModelEvaluator:
-    def __init__(self,
-                 X_train: pd.DataFrame,
-                 y_train: pd.Series,
-                 X_test: pd.DataFrame,
-                 y_test: pd.Series,
-                 raw_train: pd.DataFrame,
-                 raw_test: pd.DataFrame,
-                 class_name_list: str = None
-                 ):
+    def __init__(
+        self,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        X_test: pd.DataFrame,
+        y_test: pd.Series,
+        raw_train: pd.DataFrame,
+        raw_test: pd.DataFrame,
+        class_name_list: List[str] = None
+    ):
         """
         Initiate with the datasets to be used for testing
         X_train, y_train, X_test, y_test: fully processed datasets

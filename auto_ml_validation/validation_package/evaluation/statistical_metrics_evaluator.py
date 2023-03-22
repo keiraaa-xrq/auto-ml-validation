@@ -2,14 +2,17 @@ from typing import *
 import math
 import pandas as pd
 import numpy as np
+import scipy
 
 
 class StatisticalMetricsEvaluator:
-    def __init__(self,
-                 train=None,
-                 test=None,
-                 processed_train=None,
-                 processed_test=None):
+    def __init__(
+        self,
+        train: pd.DataFrame,
+        test: pd.DataFrame,
+        processed_train: pd.DataFrame,
+        processed_test: pd.DataFrame
+    ):
         self.train = train
         self.test = test
         self.processed_train = processed_train
@@ -51,8 +54,8 @@ class StatisticalMetricsEvaluator:
     def csi_for_each_feature(self,
                              ft_name: str,
                              num_bins=10):
-        lower_range = min(min(train_set[ft_name]), min(test_set[ft_name]))
-        upper_range = max(max(train_set[ft_name]), max(test_set[ft_name]))
+        lower_range = min(min(self.train[ft_name]), min(self.test[ft_name]))
+        upper_range = max(max(self.train[ft_name]), max(self.test[ft_name]))
 
         bin_list = np.arange(lower_range,
                              upper_range+(upper_range-lower_range)/num_bins,
@@ -100,4 +103,4 @@ class StatisticalMetricsEvaluator:
 
     def kstest(self,
                score_col_name: str) -> float:
-        return ks_2samp(self.train['score_col_name'], self.test['score_col_name'])
+        return scipy.stats.ks_2samp(self.train[score_col_name], self.test[score_col_name])

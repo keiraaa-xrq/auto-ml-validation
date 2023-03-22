@@ -1,3 +1,4 @@
+from typing import *
 import pandas as pd
 import sklearn.metrics as skl
 import numpy as np
@@ -5,6 +6,7 @@ import plotly.express as px
 import scikitplot as skp
 from sklearn.inspection import PartialDependenceDisplay
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.base import BaseEstimator
 from typing import Optional
 
 
@@ -12,13 +14,14 @@ class PerformanceEvaluator:
 
     def __init__(
         self,
-        positive_proba: np.ndarray,
+        proba: np.ndarray,
         threshold: float,
         y_true: np.ndarray,
         X: pd.DataFrame,
-        model
+        model: BaseEstimator
     ):
-        self.positive_proba = positive_proba
+        self.proba = proba
+        self.positive_proba = proba[:, 1]
         self.threshold = threshold
         self.y_true = y_true
         self.y_pred = self.get_pred()
@@ -31,11 +34,11 @@ class PerformanceEvaluator:
     def get_dist_plot(self):
         chart_df = pd.DataFrame(self.positive_proba)
         chart_df.columns = ["proba"]
-        return px.histogram(chart_df, x="proba",
+        return px.histogram(chart_df, x="Predicted Positive Probability",
                             title="Prediction Distribution")
 
     def get_confusion_matrix(self):
-        return ConfusionMatrixDisplay.from_predictions(self.y_true, self.get_pred(),
+        return ConfusionMatrixDisplay.from_predictions(self.y_true, self.y_pred,
                                                        cmap='Oranges')
 
     def cal_metrics(self) -> float:
@@ -110,3 +113,23 @@ class PerformanceEvaluator:
             feature = self.X.columns
         n_cols = 5
         return PartialDependenceDisplay.from_estimator(self.model, self.X, features=feature, n_cols=n_cols)
+
+
+def evaluate_performance(
+    pred_proba: np.ndarray,
+    y_true: np.ndarray,
+    X: pd.DataFrame,
+    model: BaseEstimator,
+    threshold: float = 0.5,
+) -> Dict:
+    # performance
+    print("Evaluating model performance metrics...")
+    pme = PerformanceEvaluator(
+        pred_proba, threshold, y_true, X, model)
+    metrics, gini, auc = pme.cal_metrics(), pme.cal_gini(), pme.cal_auc()
+    dist, confusion, roc, pr, lift, pdp = pme.get_dist_plot(), pme.get_confusion_matrix(
+    ), pme.get_roc_curve(), pme.get_pr_curve(), pme.get_lift_chart(), pme.get_partial_dependence()
+    output = {"metrics": metrics, "dist": dist, "lift": lift, "pr": pr,
+              "roc": roc, "pdp": pdp, "confusion": confusion, "gini": gini, "auc": auc}
+    print("Model performance metrics evaluation done!")
+    return output

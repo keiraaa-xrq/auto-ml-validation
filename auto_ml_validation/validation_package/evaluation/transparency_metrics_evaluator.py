@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import shap
+# import shap
 from lime.lime_tabular import LimeTabularExplainer
 from lime import submodular_pick
 
@@ -44,6 +44,7 @@ class TransparencyMetricsEvaluator:
         global_lime_fig.show_in_notebook(show_table=True)
         return local_lime_fig, global_lime_fig, local_lime_fig.as_list(), global_lime_fig.as_map()[0]
 
+    """
     def shap_interpretability(self):
         shap_values = self.shap_explainer(self.X)
         i = np.random.randint(0, self.X.shape[0])
@@ -71,3 +72,4 @@ class TransparencyMetricsEvaluator:
         for imp, name in global_impt_map:
             print(f"Feature {name}: importance = {imp:.3f}")
         return local_shap_fig, global_shap_fig, local_impt_map, global_impt_map
+    """
