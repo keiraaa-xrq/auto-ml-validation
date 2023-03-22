@@ -1,33 +1,48 @@
+from typing import *
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-# import shap
+import shap
 from lime.lime_tabular import LimeTabularExplainer
 from lime import submodular_pick
+from sklearn.base import BaseEstimator
 
 
 class TransparencyMetricsEvaluator:
-    def __init__(self, model, X, class_name_list=None):
+    def __init__(
+        self,
+        model: BaseEstimator,
+        X: pd.DataFrame,
+        class_names: List[str] = None
+    ):
         self.model = model
         self.X = X
-        self.class_name_list = class_name_list
+        self.class_names = class_names
 
-        self.lime_explainer = LimeTabularExplainer(X.values, feature_names=X.columns, discretize_continuous=True,
-                                                   class_names=[class_name_list] if class_name_list is not None else None)
+        self.lime_explainer = LimeTabularExplainer(
+            X.to_numpy(),
+            feature_names=X.columns,
+            discretize_continuous=True,
+            class_names=class_names
+        )
         self.shap_explainer = shap.Explainer(model.predict, X)
 
     def lime_interpretability(self):
         i = np.random.randint(0, self.X.shape[0])
-        def predict_fn(x): return self.model.predict_proba(x).astype(float)
+
+        def predict_fn(x):
+            return self.model.predict_proba(x).astype(float)
         local_lime_fig = self.lime_explainer.explain_instance(
             self.X.iloc[i], predict_fn, num_features=len(self.X.columns))
         # Generate global LIME plot
-        sp_obj = submodular_pick.SubmodularPick(self.lime_explainer,
-                                                self.X.values,
-                                                predict_fn,
-                                                sample_size=1,
-                                                num_features=len(
-                                                    self.X.columns),
-                                                num_exps_desired=1)
+        sp_obj = submodular_pick.SubmodularPick(
+            self.lime_explainer,
+            self.X.to_numpy(),
+            predict_fn,
+            sample_size=1,
+            num_features=len(self.X.columns),
+            num_exps_desired=1
+        )
         global_lime_fig = sp_obj.sp_explanations[0]
         # Print local feature importances
         print('{:<30} {:<10}'.format('Feature', 'Weight'))
@@ -44,7 +59,6 @@ class TransparencyMetricsEvaluator:
         global_lime_fig.show_in_notebook(show_table=True)
         return local_lime_fig, global_lime_fig, local_lime_fig.as_list(), global_lime_fig.as_map()[0]
 
-    """
     def shap_interpretability(self):
         shap_values = self.shap_explainer(self.X)
         i = np.random.randint(0, self.X.shape[0])
@@ -72,4 +86,3 @@ class TransparencyMetricsEvaluator:
         for imp, name in global_impt_map:
             print(f"Feature {name}: importance = {imp:.3f}")
         return local_shap_fig, global_shap_fig, local_impt_map, global_impt_map
-    """

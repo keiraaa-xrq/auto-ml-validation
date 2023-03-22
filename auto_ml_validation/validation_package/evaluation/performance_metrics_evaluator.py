@@ -7,7 +7,6 @@ import scikitplot as skp
 from sklearn.inspection import PartialDependenceDisplay
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from sklearn.base import BaseEstimator
-from typing import Optional
 
 
 class PerformanceEvaluator:
@@ -33,9 +32,11 @@ class PerformanceEvaluator:
 
     def get_dist_plot(self):
         chart_df = pd.DataFrame(self.positive_proba)
-        chart_df.columns = ["proba"]
-        return px.histogram(chart_df, x="Predicted Positive Probability",
-                            title="Prediction Distribution")
+        chart_df.columns = ["postive probability"]
+        fig = px.histogram(chart_df, x="postive probability",
+                           title="Prediction Distribution")
+        fig.show()
+        return fig
 
     def get_confusion_matrix(self):
         return ConfusionMatrixDisplay.from_predictions(self.y_true, self.y_pred,
@@ -51,22 +52,26 @@ class PerformanceEvaluator:
 
     def get_roc_curve(self):
         fpr, tpr, thresholds = skl.roc_curve(self.y_true, self.positive_proba)
-        return px.area(
+        fig = px.area(
             x=fpr, y=tpr,
             title='ROC Curve',
             labels=dict(x='False Positive Rate', y='True Positive Rate'),
             width=700, height=500
         )
+        fig.show()
+        return fig
 
     def get_pr_curve(self):
         precision, recall, thres = skl.precision_recall_curve(
             self.y_true, self.positive_proba)
-        return px.area(
+        fig = px.area(
             x=recall, y=precision,
             title='Precision-Recall Curve',
             labels=dict(x='Recall', y='Precision'),
             width=700, height=500
         )
+        fig.show()
+        return fig
 
     def cal_auc(self):
         precision, recall, thres = skl.precision_recall_curve(
@@ -76,43 +81,8 @@ class PerformanceEvaluator:
             "PRAUC": skl.auc(recall, precision)
         }
 
-    def cal_gini(self):
-        """Calculate GINI index for class and attributes"""
-        def _gini_impurity(value_counts):
-            n = value_counts.sum()
-            p_sum = 0
-            for key in value_counts.keys():
-                p_sum = p_sum + \
-                    (value_counts[key] / n) * (value_counts[key] / n)
-            gini = 1 - p_sum
-            return gini
-
-        def _gini_attribute(attribute_name):
-            attribute_values = self.X[attribute_name].value_counts()
-            gini_A = 0
-            for key in attribute_values.keys():
-                df_k = pd.DataFrame(self.y_true)[
-                    self.X[attribute_name] == key].value_counts()
-                n_k = attribute_values[key]
-                n = self.X.shape[0]
-                gini_A = gini_A + ((n_k / n) * _gini_impurity(df_k))
-            return gini_A
-
-        result = {"CLASS": _gini_impurity(
-            pd.DataFrame(self.y_true).value_counts())}
-        for key in (self.X).columns:
-            result[key] = _gini_attribute(key)
-
-        return result
-
     def get_lift_chart(self):
         return skp.metrics.plot_lift_curve(self.y_true, self.proba)
-
-    def get_partial_dependence(self, feature: Optional[str] = None):
-        if feature is None:
-            feature = self.X.columns
-        n_cols = 5
-        return PartialDependenceDisplay.from_estimator(self.model, self.X, features=feature, n_cols=n_cols)
 
 
 def evaluate_performance(
@@ -126,10 +96,11 @@ def evaluate_performance(
     print("Evaluating model performance metrics...")
     pme = PerformanceEvaluator(
         pred_proba, threshold, y_true, X, model)
-    metrics, gini, auc = pme.cal_metrics(), pme.cal_gini(), pme.cal_auc()
-    dist, confusion, roc, pr, lift, pdp = pme.get_dist_plot(), pme.get_confusion_matrix(
-    ), pme.get_roc_curve(), pme.get_pr_curve(), pme.get_lift_chart(), pme.get_partial_dependence()
-    output = {"metrics": metrics, "dist": dist, "lift": lift, "pr": pr,
-              "roc": roc, "pdp": pdp, "confusion": confusion, "gini": gini, "auc": auc}
+    metrics, auc = pme.cal_metrics(), pme.cal_auc()
+    dist, confusion, roc, pr, lift = pme.get_dist_plot(), pme.get_confusion_matrix(
+    ), pme.get_roc_curve(), pme.get_pr_curve(), pme.get_lift_chart()
+    stats_output = {"metrics": metrics, "auc": auc}
+    charts = {"dist": dist, "lift": lift, "pr": pr,
+              "roc": roc, "confusion": confusion, }
     print("Model performance metrics evaluation done!")
-    return output
+    return stats_output, charts
