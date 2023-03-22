@@ -37,12 +37,6 @@ class FairnessMetricsEvaluator:
             if type(col) == object:
                 self.test['col'] = self.test['col'].astype(str)
 
-        #change the name of score column and label column
-        self.train.rename(columns={score_col_name: "score", 
-                                   label_col_name: "label_value"})
-        self.test.rename(columns={score_col_name: "score", 
-                                   label_col_name: "label_value"})
-
         # preprocessing using aequitas
         train_df, _ = preprocess_input_df(self.train)
         test_df, _ = preprocess_input_df(self.test)
@@ -61,49 +55,51 @@ class FairnessMetricsEvaluator:
                                      group_metric,
                                      ax_lim = ax_lim,
                                      min_group_size = min_group_size)
+        return plot
     
-    def fairness_visualization(
-            self,
-            X_train: np.array,
-            X_test: np.array, 
-            y_test: np.array, 
-            y_pred: np.array, 
-            y_train: np.array, 
-            y_prob: np.array, 
-            prot_cat_var_value):
-    """
-    X_train : All the feature values in training set.
-    X_test : All the feature values in testing set.
-    y_true : Ground truth target values.
-    y_pred : Predicted targets as returned by classifier.
-    y_train : Ground truth for training data.
-    y_prob : Predicted probabilities as returned by classifier. 
-    cat_var_list: list of names for all the categorical variables 
-    prot_cat_var_value: a python dict where the key is string and value is a list of string 
-    model : an sklearn pipeline object 
-    """
-    
-    test_function_cs()
-    y_true = np.array(y_test)
-    y_pred = np.array(y_pred)
-    y_train = np.array(y_train)
-    p_var = self.cat_var_list
-    p_grp = prot_cat_var_value
-    x_train = X_train
-    x_test = X_test
-    model_object = self.model
-    model_name = "credit scoring"
-    model_type = "credit"
-    y_prob = y_prob
+    def fairness_visualization(self, 
+                                X_train: pd.DataFrame,
+                                X_test: pd.DataFrame, 
+                                y_test: pd.DataFrame, 
+                                y_pred: pd.DataFrame, 
+                                y_train: pd.DataFrame, 
+                                y_prob: pd.DataFrame, 
+                                prot_cat_var_value: dict):
+        """
+        X_train : All the feature values in training set.
+        X_test : All the feature values in testing set.
+        y_true : Ground truth target values.
+        y_pred : Predicted targets as returned by classifier.
+        y_train : Ground truth for training data.
+        y_prob : Predicted probabilities as returned by classifier. 
+        cat_var_list: list of names for all the categorical variables 
+        prot_cat_var_value: a python dict where the key is string and value is a list of string 
+        model : an sklearn pipeline object 
+        """
 
-    container = ModelContainer(y_true = y_true, y_train = y_train, p_var = p_var, p_grp = p_grp, 
-    x_train = x_train,  x_test = x_test, model_object = model_object, model_type  = model_type,
-    model_name =  model_name, y_pred= y_pred, y_prob= y_prob)
+        test_function_cs()
 
-    cre_sco_obj= CreditScoring(model_params = [container], fair_threshold = 0.43, 
-    fair_concern = "eligible", fair_priority = "benefit", fair_impact = "significant", 
-    perf_metric_name = "balanced_acc", fair_metric_name = "equal_opportunity") 
-    
-    cre_sco_obj.evaluate()
-    
-    cre_sco_obj.evaluate(visualize = True)
+        # pass in the data and model info
+        y_true = np.array(y_test)
+        y_pred = np.array(y_pred)
+        y_train = np.array(y_train)
+        p_var = self.cat_var_list
+        p_grp = prot_cat_var_value
+        x_train = X_train
+        x_test = X_test
+        model_object = self.model
+        # set default to credit 
+        model_type = 'credit'
+        y_prob = y_prob
+
+        container = ModelContainer(y_true = y_true, y_train = y_train, p_var = p_var, p_grp = p_grp, 
+        x_train = x_train,  x_test = x_test, model_object = model_object, model_type  = model_type,
+        y_pred= y_pred, y_prob= y_prob)
+
+        cre_sco_obj= CreditScoring(model_params = [container], fair_threshold = 0.43, 
+        fair_concern = "eligible", fair_priority = "benefit", fair_impact = "significant", 
+        perf_metric_name = "balanced_acc", fair_metric_name = "equal_opportunity") 
+        
+        cre_sco_obj.evaluate()
+        
+        cre_sco_obj.evaluate(visualize = True)
