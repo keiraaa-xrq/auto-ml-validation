@@ -14,6 +14,7 @@ class TransparencyMetricsEvaluator:
         self.lime_explainer = LimeTabularExplainer(X.values, feature_names=X.columns, discretize_continuous=True,
                                                    class_names=[class_name_list] if class_name_list is not None else None)
         self.shap_explainer = shap.Explainer(model.predict, X)
+    
     def lime_interpretability(self):
         i = np.random.randint(0, self.X.shape[0])
         predict_fn = lambda x: self.model.predict_proba(x).astype(float)
@@ -64,3 +65,38 @@ class TransparencyMetricsEvaluator:
         for imp, name in global_impt_map:
             print(f"Feature {name}: importance = {imp:.3f}")
         return local_shap_fig, global_shap_fig, local_impt_map, global_impt_map
+
+"""
+
+    def get_partial_dependence(self, feature: Optional[str] = None):
+        if feature is None:
+            feature = self.X.columns
+        n_cols = 5
+        return PartialDependenceDisplay.from_estimator(self.model, self.X, features=feature, n_cols=n_cols)
+        
+        def cal_gini(self):
+        """Calculate GINI index for class and attributes"""  
+        def _gini_impurity (value_counts):
+            n = value_counts.sum()
+            p_sum = 0
+            for key in value_counts.keys():
+                p_sum = p_sum  +  (value_counts[key] / n ) * (value_counts[key] / n ) 
+            gini = 1 - p_sum
+            return gini
+        
+        def _gini_attribute(attribute_name):
+            attribute_values = self.X[attribute_name].value_counts()
+            gini_A = 0 
+            for key in attribute_values.keys():
+                df_k = pd.DataFrame(self.y_true)[self.X[attribute_name] == key].value_counts()
+                n_k = attribute_values[key]
+                n = self.X.shape[0]
+                gini_A = gini_A + (( n_k / n) * _gini_impurity(df_k))
+            return gini_A
+        
+        result = {}
+        for key in (self.X).columns:
+            result[key] = _gini_attribute(key)
+        
+        return result
+"""

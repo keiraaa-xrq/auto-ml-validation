@@ -65,39 +65,7 @@ class PerformanceEvaluator:
             "ROCAUC": skl.roc_auc_score(self.y_true, self.positive_proba),
             "PRAUC": skl.auc(recall, precision)
         }
-
-    def cal_gini(self):
-        """Calculate GINI index for class and attributes"""  
-        def _gini_impurity (value_counts):
-            n = value_counts.sum()
-            p_sum = 0
-            for key in value_counts.keys():
-                p_sum = p_sum  +  (value_counts[key] / n ) * (value_counts[key] / n ) 
-            gini = 1 - p_sum
-            return gini
-        
-        def _gini_attribute(attribute_name):
-            attribute_values = self.X[attribute_name].value_counts()
-            gini_A = 0 
-            for key in attribute_values.keys():
-                df_k = pd.DataFrame(self.y_true)[self.X[attribute_name] == key].value_counts()
-                n_k = attribute_values[key]
-                n = self.X.shape[0]
-                gini_A = gini_A + (( n_k / n) * _gini_impurity(df_k))
-            return gini_A
-        
-        result = {"CLASS": _gini_impurity(pd.DataFrame(self.y_true).value_counts())}
-        for key in (self.X).columns:
-            result[key] = _gini_attribute(key)
-        
-        return result
     
     def get_lift_chart(self):
         return skp.metrics.plot_lift_curve(self.y_true, self.proba)
-        
-    def get_partial_dependence(self, feature: Optional[str] = None):
-        if feature is None:
-            feature = self.X.columns
-        n_cols = 5
-        return PartialDependenceDisplay.from_estimator(self.model, self.X, features=feature, n_cols=n_cols)
         

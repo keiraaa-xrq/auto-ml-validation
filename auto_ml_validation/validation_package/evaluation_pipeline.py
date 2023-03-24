@@ -4,76 +4,65 @@ Consolidate all the evaluations and generate word format report
 
 from typing import *
 import pandas as pd
-from validation_package.evaluation.index import ModelEvaluator
-from validation_package.algorithms.logistic_regression import LogisticClassifier
-from docx import Document
-from docx.shared import Inches
+from .fairness_metrics_evaluator import *
+from .performance_metrics_evaluator import *
+from .statistical_metrics_evaluator import *
+from .transparency_metrics_evaluator import *
+
 
 
 def evaluation_pipeline(
-        X_train: pd.DataFrame,
-        y_train: pd.Series,
-        X_test: pd.DateOffset,
-        y_test: pd.Series,
-        raw_train: pd.DataFrame,
-        raw_test: pd.DataFrame,
-        class_name_list: List[str],
-        proba: pd.Series,
-        model,
-        benchmark_model: Optional[any],
-        benchmark_proba: Optional[pd.Series],
-        threshold: float
+    model,
+    train: Dict[str, Union[pd.DataFrame, np.ndarray]],
+    test: Dict[str, Union[pd.DataFrame, np.ndarray]],
+    threshold: float,
+    algo: str,
+    params: Dict[str, any],
+    num_of_bins: int = 10,
+    cat_val_name: List[str], 
+    cat_val_value: Dict[str, List[str]],
+    selected_features: List[str]
 ):
-    evaluator = ModelEvaluator(X_train, y_train, X_test, y_test, raw_train, raw_test, class_name_list)
-    model_performance = evaluator.evaluate_model(model, proba, threshold)
-    if benchmark_model and benchmark_proba:
-        benchmark_performance = evaluator.evaluate_model(benchmark_model, benchmark_proba, threshold)
-
-    # generate report
-    generate_report(model_performance)
-
-def generate_report(mp, bp: Optional[any] = None):
     """
-    Format and generate word report in docs.
-
+    Takes in model, data and parameters and generate one dictionary of numerical results and one dictionary for graphical results
     Input:
-    - mp: model performance
-    - bp: benchmark model performance. If provided, comparison will be included.
-
+        train, test: dictionary with 'raw_X', 'processed_X', 'y', 'pred_proba' as keys and pandas DataFrame or numpy ndarray as values
+    
     """
-    # Save images to local
-    # !! for plotly chart, the package kaleido is required to export the chart
-    for c in ["dist", "pr", "roc"]:
-        mp[c].write_image(f'{c}.png')
-    for c in ["lift"]:
-        mp[c].figure.savefig(f'{c}.png')
-    for c in ["pdp", "confusion"]:
-        mp[c].figure_.savefig(f'{c}.png')
+    # check whether the dictionary contains all the datasets needed
 
-    doc = Document()
-    doc.add_heading('Model Validation Report', 0)
-    doc.add_heading('Model Performance Metrics', 1)
-    doc.add_paragraph('This section includes generic model performance metrics.')
-    doc.add_picture('dist.png')
-    doc.add_paragraph(f"Accuracy: {mp['metrics']['accuracy']} \n Precision: {mp['metrics']['precision']} \n Recall: {mp['metrics']['recall']} \n F1 Score: {mp['metrics']['f1_score']}")
-    doc.add_picture('lift.png')
-    doc.save('report.docx')
+    # performance
+    print("Evaluating model performance metrics...")
+    pme = PerformanceEvaluator(test['pred_proba'], threshold, test['y'], test['processed_X'], model)
+    metrics, auc = pme.cal_metrics(), pme.cal_auc()
+    dist, confusion, roc, pr, lift = pme.get_dist_plot(), pme.get_confusion_matrix(), pme.get_roc_curve(), pme.get_pr_curve(), pme.get_lift_chart()
+    print("Model performance metrics evaluation done!")
 
-def main():
-    X_train = pd.read_csv("~/Desktop/Capstone/auto-ml-validation/data/stage_2/loanstats_train_X_processed.csv")
-    y_train = pd.read_csv("~/Desktop/Capstone/auto-ml-validation/data/stage_2/loanstats_train_y.csv")
-    X_test = pd.read_csv('~/Desktop/Capstone/auto-ml-validation/data/stage_2/loanstats_test_X_processed.csv')
-    y_test = pd.read_csv("~/Desktop/Capstone/auto-ml-validation/data/stage_2/loanstats_test_y.csv")
-    raw_train = pd.read_csv("~/Desktop/Capstone/auto-ml-validation/data/stage_2/loanstats_train.csv")
-    raw_test = pd.read_csv("~/Desktop/Capstone/auto-ml-validation/data/stage_2/loanstats_test.csv")
-    model = LogisticClassifier()
-    model.fit(X_train, y_train)
-    proba = model.predict_proba(X_test)
-    print("Start evaluating model.")
-    evaluation_pipeline(X_train, y_train, X_test, y_test, raw_train, raw_test, None, proba, model._model, None, None, 0.5)
-    print("Evaluation done!")
+    # statistical
+    print("Evaluating statistical metrics...")
+    sme = StatisticalMetricsEvaluator(train, test, num_of_bins)
+    psi, psi_df = sme.calculate_psi()
+    csi_list, csi_dict = sme.csi_for_all_features()
+    ks = sme.kstest()
+    print("Statistical metrics evaluation done!")
 
+    # fairness
 
-if __name__ == "__main__":
-    main()
+    # transparency
+    print("Evaluating transparency metrics...")
+    tme = TransparencyMetricsEvaluator(model, test['processed_X'])
+    local_lime_fig, global_lime_fig, local_lime_lst, global_lime_map = tme.lime_interpretability()
+    local_shap_fig, global_shap_fig, local_impt_map, global_impt_map = tme.shap_interpretability()
+    gini, pdp = tme.cal_gini(), tme.get_partial_dependence()
+    print("Transparency metrics evaluation done!")
+
+    return {
+            "dist": dist, "lift": lift, "pr": pr, "roc": roc, "confusion": confusion,
+            "local_lime_fig": local_lime_fig, "global_lime_fig": global_lime_fig, "local_shap_fig": local_shap_fig, "global_shap_fig": global_shap_fig, 
+        }, {
+            "metrics": metrics, "gini": gini, "auc": auc, 
+            "local_lime_map": local_lime_lst, "global_lime_map": global_lime_map, "local_impt_map": local_impt_map, "global_impt_map": global_impt_map,
+            "psi": psi, "psi_df": psi_df, "csi_list": csi_list, "csi_dict": csi_dict, "ks": ks
+        }
+
 
