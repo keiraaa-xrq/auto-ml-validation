@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 from sklearn import metrics
 from sklearn.model_selection import RandomizedSearchCV
+from ..utils.np_encoder import NpEncoder
 
 
 class AbstractBinaryClassifier(ABC):
@@ -64,11 +65,11 @@ class AbstractBinaryClassifier(ABC):
         pickle.dump(self._model, open(save_path, 'wb'))
         self._verbose_print(f'Successfully saved model to {save_path}.')
 
-    def get_params(self):
+    def get_params(self, deep=True) -> Dict:
         """
         Get the hyperparameters of the model.
         """
-        return self._model.get_params()
+        return self._model.get_params(deep=deep)
 
     def set_params(self, new_params: Dict):
         """
@@ -81,7 +82,7 @@ class AbstractBinaryClassifier(ABC):
         Save hyperparameters to a json file.
         """
         with open(save_path, 'w') as f:
-            json.dump(self.get_params(), f)
+            json.dump(self.get_params(), f, cls=NpEncoder)
         self._verbose_print(
             f'Successfully saved hyperparameters to {save_path}.')
 

@@ -4,11 +4,7 @@ Consolidate all the evaluations and generate word format report
 
 from typing import *
 import pandas as pd
-from .fairness_metrics_evaluator import *
-from .performance_metrics_evaluator import *
-from .statistical_metrics_evaluator import *
-from .transparency_metrics_evaluator import *
-
+from evaluation import *
 
 
 def evaluation_pipeline(
@@ -18,10 +14,10 @@ def evaluation_pipeline(
     threshold: float,
     algo: str,
     params: Dict[str, any],
-    num_of_bins: int = 10,
     cat_val_name: List[str], 
     cat_val_value: Dict[str, List[str]],
-    selected_features: List[str]
+    selected_features: List[str],
+    num_of_bins: int = 10
 ):
     """
     Takes in model, data and parameters and generate one dictionary of numerical results and one dictionary for graphical results
@@ -39,21 +35,21 @@ def evaluation_pipeline(
     print("Model performance metrics evaluation done!")
 
     # statistical
-    print("Evaluating statistical metrics...")
-    sme = StatisticalMetricsEvaluator(train, test, num_of_bins)
-    psi, psi_df = sme.calculate_psi()
-    csi_list, csi_dict = sme.csi_for_all_features()
-    ks = sme.kstest()
-    print("Statistical metrics evaluation done!")
+    # print("Evaluating statistical metrics...")
+    # sme = StatisticalMetricsEvaluator(train, test, num_of_bins)
+    # psi, psi_df = sme.calculate_psi(score_col_name='loan_status')
+    # csi_list, csi_dict = sme.csi_for_all_features()
+    # ks = sme.kstest()
+    # print("Statistical metrics evaluation done!")
 
     # fairness
 
     # transparency
     print("Evaluating transparency metrics...")
-    tme = TransparencyMetricsEvaluator(model, test['processed_X'])
+    tme = TransparencyMetricsEvaluator(model, test['processed_X'].iloc[0:2500, :], test['y'].iloc[0:2500, :])  # for testing
     local_lime_fig, global_lime_fig, local_lime_lst, global_lime_map = tme.lime_interpretability()
     local_shap_fig, global_shap_fig, local_impt_map, global_impt_map = tme.shap_interpretability()
-    gini, pdp = tme.cal_gini(), tme.get_partial_dependence()
+    gini = tme.cal_gini()
     print("Transparency metrics evaluation done!")
 
     return {
@@ -62,7 +58,8 @@ def evaluation_pipeline(
         }, {
             "metrics": metrics, "gini": gini, "auc": auc, 
             "local_lime_map": local_lime_lst, "global_lime_map": global_lime_map, "local_impt_map": local_impt_map, "global_impt_map": global_impt_map,
-            "psi": psi, "psi_df": psi_df, "csi_list": csi_list, "csi_dict": csi_dict, "ks": ks
+            # "psi": psi, "psi_df": psi_df, 
+            # "csi_list": csi_list, "csi_dict": csi_dict, "ks": ks
         }
 
 

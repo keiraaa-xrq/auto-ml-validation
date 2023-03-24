@@ -1,14 +1,20 @@
+from typing import *
+import pandas as pd
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import shap
 from lime.lime_tabular import LimeTabularExplainer
 from lime import submodular_pick
+from sklearn.base import BaseEstimator
+
 
 
 class TransparencyMetricsEvaluator:
-    def __init__(self, model, X, class_name_list=None):
+    def __init__(self, model, X, y, class_name_list=None):
         self.model = model
         self.X = X
+        self.y = y
         self.class_name_list = class_name_list
 
         self.lime_explainer = LimeTabularExplainer(X.values, feature_names=X.columns, discretize_continuous=True,
@@ -66,15 +72,14 @@ class TransparencyMetricsEvaluator:
             print(f"Feature {name}: importance = {imp:.3f}")
         return local_shap_fig, global_shap_fig, local_impt_map, global_impt_map
 
-"""
 
-    def get_partial_dependence(self, feature: Optional[str] = None):
-        if feature is None:
-            feature = self.X.columns
-        n_cols = 5
-        return PartialDependenceDisplay.from_estimator(self.model, self.X, features=feature, n_cols=n_cols)
+    # def get_partial_dependence(self, feature: Optional[str] = None):
+    #     if feature is None:
+    #         feature = self.X.columns
+    #     n_cols = 5
+    #     return PartialDependenceDisplay.from_estimator(self.model, self.X, features=feature, n_cols=n_cols)
         
-        def cal_gini(self):
+    def cal_gini(self):
         """Calculate GINI index for class and attributes"""  
         def _gini_impurity (value_counts):
             n = value_counts.sum()
@@ -88,15 +93,14 @@ class TransparencyMetricsEvaluator:
             attribute_values = self.X[attribute_name].value_counts()
             gini_A = 0 
             for key in attribute_values.keys():
-                df_k = pd.DataFrame(self.y_true)[self.X[attribute_name] == key].value_counts()
+                df_k = pd.DataFrame(self.y)[self.X[attribute_name] == key].value_counts()
                 n_k = attribute_values[key]
                 n = self.X.shape[0]
                 gini_A = gini_A + (( n_k / n) * _gini_impurity(df_k))
             return gini_A
         
         result = {}
-        for key in (self.X).columns:
+        for key in (self.X).columns[0:20]: # for testing
             result[key] = _gini_attribute(key)
         
         return result
-"""
