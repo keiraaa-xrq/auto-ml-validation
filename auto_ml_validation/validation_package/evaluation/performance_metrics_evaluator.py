@@ -58,6 +58,7 @@ class PerformanceEvaluator:
             labels=dict(x='False Positive Rate', y='True Positive Rate'),
             width=700, height=500
         )
+        fig.show()
         return fig
 
     def get_pr_curve(self):
