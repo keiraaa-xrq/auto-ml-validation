@@ -37,6 +37,12 @@ class FairnessMetricsEvaluator:
             if type(col) == object:
                 self.test['col'] = self.test['col'].astype(str)
 
+        #change the name of score column and label column
+        self.train.rename(columns={score_col_name: "score", 
+                                   label_col_name: "label_value"})
+        self.test.rename(columns={score_col_name: "score", 
+                                   label_col_name: "label_value"})
+
         # preprocessing using aequitas
         train_df, _ = preprocess_input_df(self.train)
         test_df, _ = preprocess_input_df(self.test)
@@ -88,8 +94,7 @@ class FairnessMetricsEvaluator:
         x_train = X_train
         x_test = X_test
         model_object = self.model
-        # set default to credit 
-        model_type = 'credit'
+        model_type = "classification"
         y_prob = y_prob
 
         container = ModelContainer(y_true = y_true, y_train = y_train, p_var = p_var, p_grp = p_grp, 
