@@ -79,7 +79,7 @@ class StatisticalMetricsEvaluator:
         return csi, output_df
 
     def csi_for_all_features(self,
-                         ft_name_list: [str],
+                         ft_name_list: list[str],
                          num_bins=10):
         df_list = []
         csi_dict = dict()

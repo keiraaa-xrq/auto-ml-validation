@@ -31,8 +31,9 @@ def statistical_model_metrics_layout(train_set: pd.DataFrame,
                                            processed_test)
     
     psi_score, psi_df = my_class.calculate_psi(prob_col, number_of_bins)
+    # print(psi_df)
+    print(psi_df.index.value)
     ks_score = my_class.kstest(prob_col)
-    print(ks_score.pvalue)
 
     if ks_score.pvalue <= 0.05:
         ks_string = str(ks_score.pvalue) + '. ' + ' Null hypothese (Training and Testing Set are from the same statistical distribution) is rejected.'
