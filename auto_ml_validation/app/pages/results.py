@@ -31,14 +31,18 @@ def statistical_model_metrics_layout(train_set: pd.DataFrame,
                                            processed_test)
     
     psi_score, psi_df = my_class.calculate_psi(prob_col, number_of_bins)
-    # print(psi_df)
-    print(psi_df.index.value)
+    # reset index as columns for display
+    psi_df.columns = psi_df.columns.astype(str)
+    psi_df = psi_df.reset_index()
+    psi_df['probability'] = psi_df['probability'].astype(str)
     ks_score = my_class.kstest(prob_col)
+
 
     if ks_score.pvalue <= 0.05:
         ks_string = str(ks_score.pvalue) + '. ' + ' Null hypothese (Training and Testing Set are from the same statistical distribution) is rejected.'
     else:
         ks_string = str(ks_score.pvalue) + '. ' + ' Null hypothese (Training and Testing Set are from the same statistical distribution) cannot be rejected.'
+        
     return html.Div(style={'backgroundColor':'#fee6c8', 'width': '95%', 'margin': 'auto'}, children = [
         html.Div([html.H3('Probability Stability Index Table', style={'textAlign': 'center', 'fontWeight': 'bold'}),
                   html.H5('PSI Score: '+str(psi_score), style={'textAlign': 'center', 'fontWeight': 'bold'}),], 
@@ -59,7 +63,7 @@ def feature_metrics_layout(train_set: pd.DataFrame,
                            test_set: pd.DataFrame,
                             processed_train: pd.DataFrame,
                             processed_test: pd.DataFrame,
-                            ft_name_list: [str],
+                            ft_name_list: list[str],
                             number_of_bins: int)->html.Div:
     
     stats_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(
@@ -69,28 +73,37 @@ def feature_metrics_layout(train_set: pd.DataFrame,
                                            processed_test)
     
     csi_df, csi_dict = stats_class.csi_for_all_features(ft_name_list, number_of_bins)
+
+    csi_children = []
+
+    for df, ft_name in zip(csi_df, ft_name_list):
+        df.columns = df.columns.astype(str)
+        df = df.reset_index()
+        df[ft_name] = df[ft_name].astype(str)
+        # print(df.columns)
+        csi_children.append(html.Br())
+        csi_children.append(html.H5(ft_name + ' CSI Score:    ' + str(csi_dict[ft_name]),
+                                    style={'textAlign': 'center', 'fontWeight': 'bold'}))
+        csi_children.append(dash_table.DataTable(id=ft_name+"-csi-table",
+                                                 data= df.to_dict('records'), 
+                                                 columns=[{"name": i, "id": i} for i in df.columns], 
+                                                 sort_action='native'))
+        
     
     return html.Div(style={'backgroundColor': '#d7d7d7', 'width': '95%', 'margin': 'auto'}, children=[
         html.Br(),
         html.H3('Feature Metrics', style={'textAlign': 'left', 'fontWeight': 'bold'}),
-        #html.Br(),
         html.Label('Please choose the feature to be displayed: '),
         dcc.Dropdown(ft_name_list, ft_name_list[0], 
                      style={'width': '50%', 'margin': 'left'}),
         html.Br(),
         html.H4('GINI Index: ' + str(0.71), style={'textAlign': 'left', 'fontWeight': 'bold'}),
         html.Div([
-                    html.H4('Characteristic Stability Index Table', style={'textAlign': 'center', 'fontWeight': 'bold'}),
-                    html.H5('CSI Score:    '+ str(csi_dict['loan_amnt']), style={'textAlign': 'center', 'fontWeight': 'bold'}),
+                    html.H4('Characteristic Stability Index Table', style={'textAlign': 'center', 'fontWeight': 'bold'})
         ], style={'width': '100%', 'top': 0, 'left': 0, 'margin': 0}),
-        dash_table.DataTable(id="csi-table",
-                    data= csi_df[0].to_dict('records'), 
-                    columns=[{"name": i, "id": i} for i in csi_df[0].columns],
-                    sort_action='native',
-                    #style={'width': '100%'}
-                    ),
+        html.Div(csi_children),
         html.Br(),
-        html.H4('Partial Dependency Plot', style={'textAlign': 'center', 'fontWeight': 'bold'}),
+        # html.H4('Partial Dependency Plot', style={'textAlign': 'center', 'fontWeight': 'bold'}),
         # html.Img(src = "assets/images/PartialDependencyPlot.jpg", 
         #          alt="PartialDependencyPlot",
         #          className = 'center',
