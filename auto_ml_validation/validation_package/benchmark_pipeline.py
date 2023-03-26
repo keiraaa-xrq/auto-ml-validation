@@ -12,6 +12,7 @@ from .algorithms.random_forest import RFClassifier
 from .algorithms.xgboost import XGBoostClassifier
 from .algorithms.support_vector_machine import SVClassifier
 from .feature_selection.feat_selection import AutoFeatureSelector
+from .utils.np_encoder import NpEncoder
 
 
 def select_features(
@@ -40,6 +41,7 @@ def fit_model(
     X_val: pd.DataFrame,
     y_val: pd.Series,
     metric: str,
+    feature_selection: bool,
     n_jobs: int,
     verbose: int = 1
 ) -> Tuple[AbstractBinaryClassifier, float, float, float, List[str]]:
@@ -47,19 +49,25 @@ def fit_model(
     Perform hyperparameter tuning and threshold optimisation.
     """
     start = time.time()
-    # select features
-    if verbose:
-        print(f'Selecting features for {clf.name}.')
-    features_selected = select_features(
-        clf, X_train, y_train, metric, n_jobs=n_jobs, verbose=verbose)
+    if feature_selection:
+        # select features
+        if verbose:
+            print(f'Selecting features for {clf.name}.')
+        features_selected = select_features(
+            clf, X_train, y_train, metric, n_jobs=n_jobs, verbose=verbose)
+        mid = time.time()
+        fs_dur = (mid - start) / 60
+        if verbose:
+            print(
+                f'Compeleted feature selection for {clf.name} in {fs_dur} mins.')
+    else:
+        features_selected = X_train.columns.tolist()
+        
     train_selected = X_train[features_selected]
     val_selected = X_val[features_selected]
-    mid = time.time()
-    fs_dur = (mid - start) / 60
     # training with hyperparameter tuning
     if verbose:
-        print(
-            f'Compeleted feature selection for {clf.name} in {fs_dur} mins. Start training.')
+        print(f'Training {clf.name}.')
     clf.random_search(train_selected, y_train, metric,
                       n_jobs=n_jobs, verbose=verbose)
     # adjust threshold
@@ -81,8 +89,8 @@ def instantiate_clfs(n_sample: int) -> List[AbstractBinaryClassifier]:
     xgb = XGBoostClassifier()
     svc = SVClassifier()
     if n_sample < 10000:
-        clfs = [dt, knn, lg, rf, xgb, svc]
-    elif n_sample < 20000:
+        clfs = [dt]
+    elif n_sample < 15000:
         clfs = [dt, knn, lg, rf, xgb]
     else:
         clfs = [dt, lg, rf, xgb]
@@ -93,13 +101,13 @@ def compare_performance(
     results: List[Tuple[AbstractBinaryClassifier, float, float, float, List[str]]],
     metric: str,
     verbose: bool = True
-) -> Tuple[str, Dict]:
+) -> Tuple[AbstractBinaryClassifier, Dict]:
     """
     Select the best classifier based on the results from fit_model.
     """
 
     output = {}
-    best_clf_name, best_threshold, best_score = None, -1, -1
+    best_clf, best_threshold, best_score = None, -1, -1
     for result in results:
         clf, threshold, score, dur, features_selected = result
         if verbose:
@@ -109,17 +117,18 @@ def compare_performance(
             'model': clf,
             'best_threshold': threshold,
             f'best_{metric}': score,
+            'hyperparameters': clf.get_params(),
             'running_time': dur,
             'features_selected': features_selected
         }
         if score > best_score:
             best_score = score
             best_threshold = threshold
-            best_clf_name = clf.name
+            best_clf = clf
     if verbose:
         print(
-            f"Best model is {best_clf_name} with {metric} of {best_score} at a threshold of {best_threshold}.")
-    return best_clf_name, output
+            f"Best model is {best_clf.name} with {metric} of {best_score} at a threshold of {best_threshold}.")
+    return best_clf, output
 
 
 def auto_benchmark(
@@ -128,6 +137,7 @@ def auto_benchmark(
     X_val: pd.DataFrame,
     y_val: pd.Series,
     metric: str,
+    feature_selection: bool,
     n_jobs: int = -1,
     mode: str = 'parallel',
     verbose: bool = True,
@@ -135,10 +145,16 @@ def auto_benchmark(
     """
     Create benchmark models and return the best performing one.
     """
+    # check input validity
+    metrics = {'accuracy', 'f1', 'precision', 'recall', 'roc_auc'}
+    if metric not in metrics:
+        raise ValueError(
+            f'Invalid metric: {metric}. Please choose from {metrics}.')
     modes = {'sequential', 'parallel'}
     if mode not in modes:
         raise ValueError(
             f'Invalid mode: {mode}. Please choose from "sequential" or "parallel".')
+
     n_sample = X_train.shape[0]
     # instantiate clfs
     clfs = instantiate_clfs(n_sample)
@@ -146,17 +162,17 @@ def auto_benchmark(
         print('Number of classifiers: ', len(clfs))
     if mode == 'parallel':
         results = Parallel(n_jobs=-1)(
-            delayed(fit_model)(clf, X_train, y_train, X_val, y_val, metric, n_jobs, verbose) for clf in clfs
+            delayed(fit_model)(clf, X_train, y_train, X_val, y_val, metric, feature_selection, n_jobs, verbose) for clf in clfs
         )
     else:
         results = []
         for clf in clfs:
-            result = fit_model(clf, X_train, y_train,
-                               X_val, y_val, metric, n_jobs, verbose)
+            result = fit_model(clf, X_train, y_train, X_val,
+                               y_val, metric, feature_selection, n_jobs, verbose)
             results.append(result)
-    best_clf_name, output = compare_performance(
+    best_clf, output = compare_performance(
         results, metric, verbose=verbose)
-    return best_clf_name, output
+    return best_clf, output
 
 
 def save_benchmark_output(output: Dict, models_dir: str, result_path: str):
@@ -169,8 +185,13 @@ def save_benchmark_output(output: Dict, models_dir: str, result_path: str):
 
     results_dict = {}
     for name, result in output.items():
+        result = result.copy()
         clf = result.pop('model')
         clf.save_model(f'{models_dir}/{name}.pkl')
         results_dict[name] = result
-    with open(result_path, 'w') as fp:
-        json.dump(results_dict, fp)
+    try:
+        with open(result_path, 'w') as fp:
+            json.dump(results_dict, fp, cls=NpEncoder)
+    except Exception as e:
+        print('Error:', e)
+        print(results_dict)

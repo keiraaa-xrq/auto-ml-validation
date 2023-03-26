@@ -71,12 +71,12 @@ def rep_dataset_layout() -> html.Div:
                     dcc.Dropdown(
                         id="model-dropdown",
                         options=[
-                            {"label": "Logistic Regression", "value": 'lr'},
+                            {"label": "Logistic Regression", "value": 'logistic'},
                             {"label": "Decision Tree", "value": 'dt'},
                             {"label": "Support Vector Machine", "value": 'svm'},
                             {'label': "Random Forest", "value": 'rf'},
                             {'label': "K-Nearest Neighbours", "value": 'knn'},
-                            {"label": "XGBoost", "value": 'xgb'}
+                            {"label": "XGBoost", "value": 'xgboost'}
                         ],
                         value=None
                     )
@@ -178,7 +178,7 @@ def auto_dataset_layout() -> html.Div:
                         {'label': 'Precision', 'value': 'precision'},
                         {'label': 'Accuracy', 'value': 'accuracy'},
                         {'label': 'Recall', 'value': 'recall'},
-                        {'label': 'AUC-ROC', 'value': 'aucroc'}
+                        {'label': 'AUC-ROC', 'value': 'aucroc'} # Check if this is correct value
                     ],
                     value='f1'
                 ),
@@ -248,11 +248,12 @@ def loading_div_layout(app) -> html.Div:
                 className="loader",
                 children=[
                 html.Img(src=app.get_asset_url("images/ball_loading.gif"), alt="loading..."),
-                html.H3("Preparing...", className="loader-text", style={'textAlign': 'center', 'fontWeight': 'bold'})
+                html.H3(id="loading-text", className="loader-text", style={'textAlign': 'center', 'fontWeight': 'bold'}, children = "Preparing...")
                 ]
             )
         ],
         type="circle",
+        loading_state={'is_loading': True}
         ), 
         style = {'display':'flex','alignItems':'center','justifyContent': 'center', 'gap': '10px'}
         )

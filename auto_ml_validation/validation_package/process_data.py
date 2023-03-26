@@ -1,7 +1,8 @@
 from typing import *
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from .utils import check_columns
+from sklearn.model_selection import train_test_split
+from .utils.utils import check_columns
 
 
 def split_x_y(
@@ -17,6 +18,16 @@ def split_x_y(
     y = data[target]
     return X, y
 
+def split_train_val(
+    X_train: pd.DataFrame, 
+    y_train: pd.Series
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+    '''
+    Split to train and validation sets
+    '''
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.1, random_state=42)
+    return X_train, X_val, y_train, y_val
+    
 
 def process_features(
     X_train: pd.DataFrame,
@@ -49,7 +60,6 @@ def process_features(
         X_num = pd.DataFrame(X_num, columns=num_variables)
         X_processed = pd.concat([X_cat, X_num], axis=1)
         X_others_processed.append(X_processed)
-
     return X_train_processed, X_others_processed
 
 

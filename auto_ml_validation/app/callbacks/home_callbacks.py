@@ -1,13 +1,13 @@
 # Landing Page Callbacks
 from auto_ml_validation.app.index import app
 from auto_ml_validation.app.pages.home import *
-from auto_ml_validation.validation_package import train_pipeline
-from auto_ml_validation.validation_package import benchmark_pipeline
+from auto_ml_validation.validation_package import model_pipeline
 
 import pandas as pd
 import io
 import base64
 import json
+import pickle
 import dash
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
@@ -38,6 +38,8 @@ home_layout = html.Div([
     )
 
 def save_proj_dat(project_name, algo_value):
+    if project_name == None:
+        project_name = ""
     project_config = {'Project Name': project_name, 'Algorithm': algo_value}
     return [json.dumps(project_config)]
 
@@ -79,7 +81,8 @@ def update_rep_dataset_inputs(hyperparams_contents, train_contents, test_content
     State('other-dataset-upload', 'contents'), State('other-dataset-upload', 'filename'),
     State('target-var-input', 'value'), 
     State('cat-var-input', 'value')],
-    prevent_initial_call=True
+    prevent_initial_call=True,
+    precedence = 1
 )
 def save_rep_data(n_clicks, hyperparams_contents, hyperparams_filename, train_contents, train_filename, test_contents, test_filename, other_contents, other_filename, target, cat_var):
     if not n_clicks:
@@ -88,16 +91,18 @@ def save_rep_data(n_clicks, hyperparams_contents, hyperparams_filename, train_co
     if ctx.triggered[0]['prop_id'] == 'submit-button.n_clicks':
         rep_data = {}
         if hyperparams_contents is not None:
-            rep_data['Hyperparams'] = parse_data(hyperparams_contents, hyperparams_filename).to_dict()
+            rep_data['Hyperparams'] = parse_data(hyperparams_contents, hyperparams_filename)
         if train_contents is not None:
             rep_data['Train Data'] = parse_data(train_contents, train_filename).to_dict()
         if test_contents is not None:
             rep_data['Test Data'] = parse_data(test_contents, test_filename).to_dict()
         if other_contents is not None:
             rep_data['Other Data'] = parse_data(other_contents, other_filename).to_dict()
+        else:
+            rep_data['Other Data'] = pd.DataFrame().to_dict()
         rep_data['Target'] = target
         rep_data['Categorical Var'] = cat_var
-        return json.dumps(rep_data)
+        return [json.dumps(rep_data)]
     else:
         raise PreventUpdate
 
@@ -113,7 +118,7 @@ def parse_data(content, filename):
     decoded = base64.b64decode(content_string)
     if 'json' in filename:
         dat = json.loads(decoded)
-    if "csv" in filename:
+    elif "csv" in filename:
         dat = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
     elif "xls" in filename:
         dat = pd.read_excel(io.BytesIO(decoded))
@@ -155,7 +160,8 @@ def update_dropdowns(contents, filename):
     State('train-auto-upload', 'contents'), State('train-auto-upload', 'filename'),
     State('test-auto-upload', 'contents'), State('test-auto-upload', 'filename'),
     State('other-auto-upload', 'contents'), State('other-auto-upload', 'filename')],
-    prevent_initial_call=True
+    prevent_initial_call=True,
+    precedence = 1
 )
 def save_auto_data(n_clicks, eval_metric, auto_feat_selection, train_contents, train_filename, test_contents, test_filename, other_contents, other_filename):
     if n_clicks is None:
@@ -169,10 +175,11 @@ def save_auto_data(n_clicks, eval_metric, auto_feat_selection, train_contents, t
             auto_data['Test Data'] = parse_data(test_contents, test_filename).to_dict()
         if other_contents is not None:
             auto_data['Other Data'] = parse_data(other_contents, other_filename).to_dict()
+        else:
+            auto_data['Other Data'] = pd.DataFrame().to_dict()
         auto_data['Evaluation Metric'] = eval_metric
         auto_data['Feature Selection'] = auto_feat_selection
-        return json.dumps(auto_data)
-        
+        return [json.dumps(auto_data)]
     else:
         raise PreventUpdate
     
@@ -199,21 +206,22 @@ def update_auto_dataset_inputs(train_contents, test_contents, other_contents, tr
     else:
         return dash.no_update, dash.no_update, dash.no_update
     
-# Callback to validate form, update content_div with loading spinner and starting modeling process when submit_button is clicked
+# Callback to validate form, update content_div with loading spinner when submit_button is clicked
 @app.callback(
     Output('content_div', 'children'), Output('validation-message', 'children'),
     Input('submit-button', 'n_clicks'),
-    [State("model-dropdown", "value"),
-     State('train-dataset-upload', 'filename'),
-     State('train-auto-upload', 'filename'),
-     State('test-dataset-upload', 'filename'),
-     State('test-auto-upload', 'filename'),
-     State('target-var-input', 'value'),
-     State('cat-var-input', 'value')
-     ]
-     
+    [State('store-rep-data','data'),
+    State('store-auto-data','data'),
+    State("model-dropdown", "value"),
+    State('train-dataset-upload', 'filename'),
+    State('train-auto-upload', 'filename'),
+    State('test-dataset-upload', 'filename'),
+    State('test-auto-upload', 'filename'),
+    State('target-var-input', 'value')],
+    prevent_initial_call=True,
+    precedence = 2,
 )
-def update_content_div(n_clicks, algorithm, train_rep, train_auto, test_rep, test_auto, target_var, cat_var):
+def update_content_div(n_clicks, rep_data, auto_data, algorithm, train_rep, train_auto, test_rep, test_auto, target_var):
     if n_clicks:
         if algorithm is None:
             return [rep_layout, auto_layout, submit_button], 'Please select an option from the algorithm dropdown.'
@@ -227,22 +235,48 @@ def update_content_div(n_clicks, algorithm, train_rep, train_auto, test_rep, tes
             return [rep_layout, auto_layout, submit_button], 'Please upload the test dataset for creating the auto-benchmarking model.'
         elif train_rep is not None and target_var is None:
             return [rep_layout, auto_layout, submit_button], 'Please select the target variable.'
-        elif train_rep is not None and cat_var is None:
-            return [rep_layout, auto_layout, submit_button], 'Please select the relevant categorical variables.'
         else:
-        # TO DO: Modelling process
             return loading_layout, ''
     else:
         return [rep_layout, auto_layout, submit_button], ''
+    
+ # Callback to begin modeling process when submit_button is clicked   
+@app.callback(
+    Output("url", "pathname"),
+    [Input("loading-spinner", "loading_state")],
+    [State("store-project", "data"),
+     State("store-rep-data", "data"),
+     State("store-auto-data", "data"),
+     State('url', 'pathname')]
+)
+def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
+    if loading:
+        project_dict = json.loads(proj)
+        rep_dict = json.loads(rep_data[0])
+        auto_dict = json.loads(auto_data[0])
 
-"""
-# Callback to replicate and auto-benchmark the model, display loading layout and redirect to results page completed
-@app.callback(Output('url', 'pathname'),
-              [Input('submit-button', 'n_clicks')],
-              [State('url', 'pathname')])
-
-def redirect_to_results_page(n_clicks, current_pathname):
-    if n_clicks:
+        project_name = project_dict['Project Name']
+        algorithm = project_dict['Algorithm']
+        hyperparams = rep_dict['Hyperparams']
+        rep_train = pd.DataFrame(rep_dict['Train Data'])
+        rep_test = pd.DataFrame(rep_dict['Test Data'])
+        rep_other = [pd.DataFrame(rep_dict['Other Data'])] if not pd.DataFrame(rep_dict['Other Data']).empty else []
+        target = rep_dict['Target'].lower()
+        cat_cols = [col.lower() for col in rep_dict['Categorical Var']]
+        auto_train = pd.DataFrame(auto_dict['Train Data'])
+        auto_test = pd.DataFrame(auto_dict['Test Data'])
+        auto_other = [pd.DataFrame(auto_dict['Other Data'])] if not pd.DataFrame(auto_dict['Other Data']).empty else []
+        metric = auto_dict['Evaluation Metric']
+        bool_map = {"yes": True, "no": False}
+        feat_sel = bool_map.get(auto_dict['Feature Selection'])
+        
+        output = model_pipeline.autoML(project_name, algorithm, hyperparams, 
+                                       rep_train, rep_test, rep_other, target, cat_cols, 
+                                       auto_train, auto_test, auto_other, metric, feat_sel)
+        print(output)
+        with open('data/validator_input/data.pkl', 'wb') as f:
+            pickle.dump(output, f)
         return '/results'
-    return current_pathname
-"""
+    
+    return current_pathname 
+
