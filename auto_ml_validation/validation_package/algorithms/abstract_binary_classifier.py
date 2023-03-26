@@ -3,11 +3,16 @@ from typing import *
 import warnings
 import pickle
 import json
+import logging
 import pandas as pd
 import numpy as np
 from sklearn import metrics
 from sklearn.model_selection import RandomizedSearchCV
 from ..utils.np_encoder import NpEncoder
+from ..utils.logger import setup_logger
+
+
+logger = setup_logger(logging.getLogger(__name__))
 
 
 class AbstractBinaryClassifier(ABC):
@@ -49,6 +54,7 @@ class AbstractBinaryClassifier(ABC):
         """
         if self._verbose > 0:
             print(msg)
+            logger.info(msg)
 
     def load_model(self, model_path: str):
         """
@@ -56,14 +62,16 @@ class AbstractBinaryClassifier(ABC):
         """
         loaded = pickle.load(open(model_path, 'rb'))
         self._model = loaded
-        self._verbose_print(f'Successfully loaded model from {model_path}.')
+        msg = f'Successfully loaded model from {model_path}.'
+        self._verbose_print(msg)
 
     def save_model(self, save_path: str):
         """
         Save self._model to a pickle file.
         """
         pickle.dump(self._model, open(save_path, 'wb'))
-        self._verbose_print(f'Successfully saved model to {save_path}.')
+        msg = f'Successfully saved model to {save_path}.'
+        self._verbose_print(msg)
 
     def get_params(self, deep=True) -> Dict:
         """
@@ -177,7 +185,7 @@ class AbstractBinaryClassifier(ABC):
         thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
         pos_proba = self.predict_proba(X_val)[:, 1]
         if metric == 'roc_auc':
-            warnings.warn(
+            logger.warning(
                 'ROC-AUC is threshold invariant. A threshold of 0.5 will be returned.')
             score = self.EVAL_METRICS[metric](y_val, pos_proba)
             return 0.5, score
