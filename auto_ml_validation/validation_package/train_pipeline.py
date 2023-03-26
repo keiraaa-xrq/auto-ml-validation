@@ -40,6 +40,6 @@ def train(
     if save:
         clf.save_model(save_path)
     if verbose:
-        print(
-            f'Completed training {clf.name}; best threshold: {best_threshold}; best {metric}: max_score')
+        msg = f'Completed training {clf.name}; best threshold: {best_threshold}; best {metric}: max_score'
+        log_info(logger, msg)
     return clf, best_threshold

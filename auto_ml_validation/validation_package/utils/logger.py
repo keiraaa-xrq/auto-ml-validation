@@ -7,8 +7,8 @@ def setup_logger(logger: logging.Logger, filepath: str = None) -> logging.Logger
     Configure Logger.
     """
     if filepath is None:
-        dt = datetime.today().strftime('%Y-%m-%dT%H:%M:%S')
-        filepath = f'./logs/{dt}.log'
+        date = datetime.today().strftime('%Y-%m-%d')
+        filepath = f'./logs/{date}.log'
     logger.setLevel(logging.INFO)
     # define file handler and set formatter
     file_handler = logging.FileHandler(filepath)
