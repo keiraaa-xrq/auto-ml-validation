@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator
@@ -10,6 +11,11 @@ from typing import *
 # Add
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
+
+from ..utils.logger import setup_logger
+
+
+logger = setup_logger(logging.getLogger(__name__))
 
 
 class AutoFeatureSelector(BaseEstimator):
@@ -48,6 +54,7 @@ class AutoFeatureSelector(BaseEstimator):
     def _verbose_print(self, msg):
         if self.verbose > 0:
             print(msg)
+            logger.info(msg)
 
     def _check_class_imbalance(self, target) -> bool:
         # TODO
