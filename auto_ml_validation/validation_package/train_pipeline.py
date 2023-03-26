@@ -4,33 +4,37 @@
 from typing import *
 import pandas as pd
 import numpy as np
-from .utils import instantiate_clf
+from .utils.utils import instantiate_clf
+from .algorithms.abstract_binary_classifier import AbstractBinaryClassifier
 
 
-def train_pipeline(
+def train(
     X_train: pd.DataFrame,
     y_train: pd.Series,
-    X_others: List[pd.DataFrame],
+    X_val: pd.DataFrame,
+    y_val: pd.DataFrame,
     algo: str,
     params: Dict,
+    metric: str,
     save: bool = False,
-    save_path: Optional[str] = ''
-) -> Tuple[np.ndarray, List[np.ndarray]]:
+    save_path: Optional[str] = '',
+    verbose: bool = True
+) -> Tuple[AbstractBinaryClassifier, float]:
     '''
-    Main function for replicating trained model and 
-    output predicted probability for the positive class.
+    Main function for replicating trained model and
+    optimise the prediction threshold.
     '''
     # prepare
     clf = instantiate_clf(algo, params)
     # train
     clf.fit(X_train, y_train)
-    # predict
-    proba_train = clf.predict_proba(X_train)[:, 1]
-    proba_others = []
-    for X in X_others:
-        proba = clf.predict_proba(X)[:, 1]
-        proba_others.append(proba)
+    # optimise threshold
+    best_threshold, max_score = clf.optimise_threshold(
+        X_val, y_val, metric, verbose=0)
     # save model
     if save:
         clf.save_model(save_path)
-    return proba_train, proba_others
+    if verbose:
+        print(
+            f'Completed training {clf.name}; best threshold: {best_threshold}; best {metric}: max_score')
+    return clf, best_threshold

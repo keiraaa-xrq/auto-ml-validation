@@ -26,3 +26,17 @@ class XGBoostClassifier(AbstractBinaryClassifier):
         super().__init__(verbose)
         self._model = XGBClassifier(**params)
         self._name = 'XGBoost Classifier'
+
+    def load_model(self, model_path: str):
+        """
+        Load an existing model from path.
+        """
+        self._model.load_model(model_path)
+        self._verbose_print(f'Successfully loaded model from {model_path}.')
+
+    def save_model(self, save_path: str):
+        """
+        Save self._model to a pickle file.
+        """
+        self._model.save_model(save_path)
+        self._verbose_print(f'Successfully saved model to {save_path}.')
