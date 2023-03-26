@@ -2,13 +2,9 @@ from typing import *
 import math
 import pandas as pd
 import numpy as np
-<<<<<<< HEAD
-from scipy.stats import ks_2samp
-=======
 import scipy
 from ..utils.utils import check_columns
 
->>>>>>> keira_main
 
 class StatisticalMetricsEvaluator:
     def __init__(
@@ -25,33 +21,6 @@ class StatisticalMetricsEvaluator:
         self.test_y = test_data['y']
         self.test_proba = test_data['pred_proba'][:, 1]
 
-<<<<<<< HEAD
-    def csi_for_each_feature(self,
-                         ft_name: str,
-                         num_bins=10):
-        lower_range = min(min(self.train[ft_name]), min(self.test[ft_name]))
-        upper_range = max(max(self.train[ft_name]), max(self.test[ft_name]))
-        
-        bin_list = np.arange(lower_range, 
-                            upper_range+(upper_range-lower_range)/num_bins, 
-                            (upper_range-lower_range)/num_bins)
-        
-        grouped_train = self.train.groupby(pd.cut(self.train[ft_name], bin_list)).count()
-        grouped_train['perc_'+ft_name] = grouped_train[ft_name]/sum(grouped_train[ft_name])
-        grouped_test = self.test.groupby(pd.cut(self.test[ft_name], bin_list)).count()
-        grouped_test['perc_'+ft_name] = grouped_test[ft_name]/sum(grouped_test[ft_name])
-        
-        # build a CSI dataframe to show the output
-        output_df = pd.DataFrame()
-        output_df['train_count'] = grouped_train[ft_name]
-        output_df['train_perc'] = grouped_train['perc_'+ft_name]
-        output_df['test_count'] = grouped_test[ft_name]
-        output_df['test_perc'] = grouped_test['perc_'+ft_name]
-        output_df['index'] =  [0]*num_bins
-        
-        csi = 0
-        for i, row in output_df.iterrows():
-=======
     def _generate_output(
         self,
         bin_list: List[float],
@@ -83,7 +52,6 @@ class StatisticalMetricsEvaluator:
         x = 0
         values = []
         for _, row in output_df.iterrows():
->>>>>>> keira_main
             actual = row['train_perc']
             expected = row['test_perc']
             if actual == 0 or expected == 0:
@@ -125,14 +93,8 @@ class StatisticalMetricsEvaluator:
         )
         return csi, output_df
 
-<<<<<<< HEAD
-    def csi_for_all_features(self,
-                         ft_name_list: list[str],
-                         num_bins=10):
-=======
     def csi_for_all_features(self, ft_names: List[str], num_bins=10):
         # check_columns(self.train_raw_X, [ft_names])
->>>>>>> keira_main
         df_list = []
         csi_dict = dict()
         for feature in ft_names:
@@ -141,15 +103,8 @@ class StatisticalMetricsEvaluator:
             df_list.append(df)
         return df_list, csi_dict
 
-<<<<<<< HEAD
-    
-    def kstest(self,
-               score_col_name: str)-> float:
-        return ks_2samp(self.processed_train[score_col_name], self.processed_test[score_col_name])
-=======
     def kstest(
         self,
         score_col_name: str
     ) -> float:
         return scipy.stats.ks_2samp(self.train_processed_X[score_col_name], self.test_processed_X[score_col_name])
->>>>>>> keira_main

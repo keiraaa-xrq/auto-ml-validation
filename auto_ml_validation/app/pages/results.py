@@ -18,24 +18,19 @@ test_set = pd.read_csv('././data/stage_2/loanstats_2019Q1_test.csv', index_col =
 train_set = pd.read_csv('././data/stage_2/loanstats_2019Q1_train.csv', index_col = False)
 ############## end of codes used to load dummy data, remove later #######################
 
-def statistical_model_metrics_layout(train_set: pd.DataFrame,
-               test_set: pd.DataFrame,
-               processed_train: pd.DataFrame,
-               processed_test: pd.DataFrame,
-               prob_col: str, 
+def statistical_model_metrics_layout(train_data: pd.DataFrame,
+               test_data: pd.DataFrame,
                number_of_bins: int) -> html.Div:
     
     my_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(train_set, 
-                                           test_set, 
-                                           processed_train,
-                                           processed_test)
+                                                                         test_set)
     
-    psi_score, psi_df = my_class.calculate_psi(prob_col, number_of_bins)
+    psi_score, psi_df = my_class.calculate_psi(number_of_bins)
     # reset index as columns for display
     psi_df.columns = psi_df.columns.astype(str)
     psi_df = psi_df.reset_index()
     psi_df['probability'] = psi_df['probability'].astype(str)
-    ks_score = my_class.kstest(prob_col)
+    ks_score = my_class.kstest('probability')
 
 
     if ks_score.pvalue <= 0.05:
@@ -66,11 +61,8 @@ def feature_metrics_layout(train_set: pd.DataFrame,
                             ft_name_list: list[str],
                             number_of_bins: int)->html.Div:
     
-    stats_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(
-                                           train_set, 
-                                           test_set, 
-                                           processed_train,
-                                           processed_test)
+    stats_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(train_set, 
+                                                                            test_set)
     
     csi_df, csi_dict = stats_class.csi_for_all_features(ft_name_list, number_of_bins)
 
@@ -80,7 +72,6 @@ def feature_metrics_layout(train_set: pd.DataFrame,
         df.columns = df.columns.astype(str)
         df = df.reset_index()
         df[ft_name] = df[ft_name].astype(str)
-        # print(df.columns)
         csi_children.append(html.Br())
         csi_children.append(html.H5(ft_name + ' CSI Score:    ' + str(csi_dict[ft_name]),
                                     style={'textAlign': 'center', 'fontWeight': 'bold'}))
@@ -103,11 +94,6 @@ def feature_metrics_layout(train_set: pd.DataFrame,
         ], style={'width': '100%', 'top': 0, 'left': 0, 'margin': 0}),
         html.Div(csi_children),
         html.Br(),
-        # html.H4('Partial Dependency Plot', style={'textAlign': 'center', 'fontWeight': 'bold'}),
-        # html.Img(src = "assets/images/PartialDependencyPlot.jpg", 
-        #          alt="PartialDependencyPlot",
-        #          className = 'center',
-        #          style={'width': '70%', 'margin': 'right', 'height': '70%'}),
         html.Br()
         
     ]) 
