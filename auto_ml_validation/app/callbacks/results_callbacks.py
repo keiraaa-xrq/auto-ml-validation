@@ -4,10 +4,9 @@ from dash.dependencies import Input, Output, State
 import json
 # Body Content
 
-# Update the PSI when user change num of bins
+# Update the PSI table when user change num of bins
 @app.callback(
     Output("psi-table", "data"),
-    # Output("psi-score", "children"),
     Input("psi-num-of-bins", "value")
 )
 # def update_statistical_metrics(num_of_bins):
@@ -23,9 +22,8 @@ def update_psi_table(num_of_bins):
 
         return psi_df.to_dict('records')
         
-
+# Update the PSI score when user change num of bins
 @app.callback(
-   # Output("psi-table", "data"),
     Output("psi-score", "children"),
     Input("psi-num-of-bins", "value")
 )
@@ -36,8 +34,6 @@ def update_psi_score(num_of_bins):
 
         return 'PSI Score: '+ str(psi_score)
                
- 
-
 # Update the CSI when user select features
 # options = train_data['raw_X'].columns.to_list()
 @app.callback(
