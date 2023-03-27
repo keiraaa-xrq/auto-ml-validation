@@ -3,10 +3,9 @@
 Bugs Discovered/To Do:
     - Seems like changing file after submitting one, doesn't change the dcc.Store input
     - Need to validate the hyperparams
-    - Check if the metric AUCROC value is set properly so that the model can be tuned
+    - Separate each log file by project
+    - Test other models, seem like hyperparams have issue with other models other than RF
 """
-
-
 from auto_ml_validation.app.index import app
 from auto_ml_validation.app.pages.home import *
 from auto_ml_validation.validation_package import model_pipeline
@@ -15,7 +14,7 @@ import pandas as pd
 import io
 import base64
 import json
-import pickle
+from datetime import datetime
 import dash
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
@@ -82,15 +81,14 @@ def update_rep_dataset_inputs(hyperparams_contents, train_contents, test_content
 # Save Data and Configure Input Variables (For Replicating)
 @app.callback(
     Output('store-rep-data', 'data'),
-    Input('submit-button', 'n_clicks'),
-    [State('hyperparams-upload', 'contents'), State('hyperparams-upload', 'filename'),
+    [Input('submit-button', 'n_clicks'),
+    State('hyperparams-upload', 'contents'), State('hyperparams-upload', 'filename'),
     State('train-dataset-upload', 'contents'), State('train-dataset-upload', 'filename'),
     State('test-dataset-upload', 'contents'), State('test-dataset-upload', 'filename'),
     State('other-dataset-upload', 'contents'), State('other-dataset-upload', 'filename'),
     State('target-var-input', 'value'), 
     State('cat-var-input', 'value')],
     prevent_initial_call=True,
-    precedence = 1
 )
 def save_rep_data(n_clicks, hyperparams_contents, hyperparams_filename, train_contents, train_filename, test_contents, test_filename, other_contents, other_filename, target, cat_var):
     if not n_clicks:
@@ -106,8 +104,6 @@ def save_rep_data(n_clicks, hyperparams_contents, hyperparams_filename, train_co
             rep_data['Test Data'] = parse_data(test_contents, test_filename).to_dict()
         if other_contents is not None:
             rep_data['Other Data'] = parse_data(other_contents, other_filename).to_dict()
-        else:
-            rep_data['Other Data'] = pd.DataFrame().to_dict()
         rep_data['Target'] = target
         rep_data['Categorical Var'] = cat_var
         return [json.dumps(rep_data)]
@@ -169,7 +165,6 @@ def update_dropdowns(contents, filename):
     State('test-auto-upload', 'contents'), State('test-auto-upload', 'filename'),
     State('other-auto-upload', 'contents'), State('other-auto-upload', 'filename')],
     prevent_initial_call=True,
-    precedence = 1
 )
 def save_auto_data(n_clicks, eval_metric, auto_feat_selection, train_contents, train_filename, test_contents, test_filename, other_contents, other_filename):
     if n_clicks is None:
@@ -183,8 +178,6 @@ def save_auto_data(n_clicks, eval_metric, auto_feat_selection, train_contents, t
             auto_data['Test Data'] = parse_data(test_contents, test_filename).to_dict()
         if other_contents is not None:
             auto_data['Other Data'] = parse_data(other_contents, other_filename).to_dict()
-        else:
-            auto_data['Other Data'] = pd.DataFrame().to_dict()
         auto_data['Evaluation Metric'] = eval_metric
         auto_data['Feature Selection'] = auto_feat_selection
         return [json.dumps(auto_data)]
@@ -227,7 +220,6 @@ def update_auto_dataset_inputs(train_contents, test_contents, other_contents, tr
     State('test-auto-upload', 'filename'),
     State('target-var-input', 'value')],
     prevent_initial_call=True,
-    precedence = 2,
 )
 def update_content_div(n_clicks, rep_data, auto_data, algorithm, train_rep, train_auto, test_rep, test_auto, target_var):
     if n_clicks:
@@ -249,14 +241,15 @@ def update_content_div(n_clicks, rep_data, auto_data, algorithm, train_rep, trai
     else:
         return [rep_layout, auto_layout, submit_button], ''
     
- # Callback to begin modeling process when submit_button is clicked   
+# Callback to begin modeling process when submit_button is clicked   
 @app.callback(
     Output("url", "pathname"),
-    [Input("loading-spinner", "loading_state")],
-    [State("store-project", "data"),
-     State("store-rep-data", "data"),
-     State("store-auto-data", "data"),
-     State('url', 'pathname')]
+    [Input("loading-spinner", "loading_state"),
+     Input("store-project", "data"),
+     Input("store-rep-data", "data")],
+     [State("store-auto-data", "data"),
+     State('url', 'pathname')],
+     prevent_initial_call=True
 )
 def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
     if loading:
@@ -283,6 +276,34 @@ def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
                                        rep_train, rep_test, rep_other, target, cat_cols, 
                                        auto_train, auto_test, auto_other, metric, feat_sel)
         
-
         return '/results'
     return current_pathname 
+
+# Callback to periodically update progress text
+@app.callback(
+    Output("loading-text", "children"), 
+    [Input("interval-component", "n_intervals")]
+)
+def update_loading_text(n_intervals):
+    date = datetime.today().strftime('%Y-%m-%d')
+    with open(f"logs/{date}.log", "r") as f:
+        logger_contents = f.read()
+
+    filtered_contents = []
+    for line in logger_contents.strip().split("\n"):
+        if "auto_ml_validation.validation_package.model_pipeline" in line:
+            filtered_contents.append(line)
+
+    loading_text = filtered_contents[-1].split(":")[-1].strip() if filtered_contents else "Preparing..."
+    return loading_text
+
+# Callback to change interval timing  based on last loading text
+@app.callback(
+    Output("interval-component", "interval"), 
+    [Input("loading-text", "children")]
+)
+def update_interval(loading_text):
+    if loading_text in ["Preparing...", "Almost done...", "Replicating the model..."]:
+        return 5000
+    else:
+        return 30000 
