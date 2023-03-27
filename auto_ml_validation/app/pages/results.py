@@ -80,11 +80,13 @@ def statistical_model_metrics_layout(train_data: pd.DataFrame,
     my_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(train_data, 
                                                                          test_data)
     psi_score, psi_df = my_class.calculate_psi(number_of_bins)
+    print(psi_df)
     # reset index as columns for display
     psi_df.columns = psi_df.columns.astype(str)
     psi_df = psi_df.reset_index()
     psi_df['index'] = psi_df['index'].astype(str)
     psi_df.rename(columns = {'index':'ranges'}, inplace = True)
+    # print(psi_df)
     ks_score = my_class.kstest('tot_cur_bal')
 
     if ks_score.pvalue <= 0.05:
@@ -92,14 +94,27 @@ def statistical_model_metrics_layout(train_data: pd.DataFrame,
     else:
         ks_string = str(ks_score.pvalue) + '. ' + ' Null hypothese (Training and Testing Set are from the same statistical distribution) cannot be rejected.'
         
-    return html.Div(style={'backgroundColor':'#fee6c8', 'width': '95%', 'margin': 'auto'}, children = [
+    return html.Div(
+        style={'backgroundColor':'#fee6c8', 'width': '95%', 'margin': 'auto'}, children = [
         html.Div([html.H3('Probability Stability Index Table', style={'textAlign': 'center', 'fontWeight': 'bold'}),
-                  html.H5('PSI Score: '+str(psi_score), style={'textAlign': 'center', 'fontWeight': 'bold'}),], 
+                  html.H5(id = 'psi-score', 
+                          children = 'PSI Score: '+str(psi_score), 
+                          style={'textAlign': 'center', 'fontWeight': 'bold'})], 
                   style={'width': '100%', 'top': 0, 'left': 0, 'margin': 0}),
-        dash_table.DataTable(id="psi-table",
-                         data= psi_df.to_dict('records'), 
-                         columns=[{"name": i, "id": i} for i in psi_df.columns],
-                         sort_action='native',
+        html.Label('Please choose the number of bins to be sliced: '),
+        dcc.Input(id="psi-num-of-bins",
+                  type='number',
+                  value=10,
+                  min=2,
+                  max=50,
+                  # restrict into integer
+                  step=1, 
+                  pattern=r'\d*'),
+        html.Br(),
+        dash_table.DataTable(id="psi-table", 
+                             data= psi_df.to_dict('records'), 
+                             columns=[{"name": i, "id": i} for i in psi_df.columns], 
+                             sort_action='native',
                          ),
         html.Br(),
         html.H6('P-value of KS Test: ' + ks_string, style={'textAlign': 'left', 'fontWeight': 'bold'}),
@@ -135,32 +150,37 @@ def feature_metrics_layout(train_data: pd.DataFrame,
                                                  sort_action='native'))
         
     
-    return html.Div(style={'backgroundColor': '#d7d7d7', 'width': '95%', 'margin': 'auto'}, children=[
+    return html.Div( 
+        style={'backgroundColor': '#d7d7d7', 'width': '95%', 'margin': 'auto'}, children=[
         html.Br(),
         html.H3('Feature Metrics', style={'textAlign': 'left', 'fontWeight': 'bold'}),
         html.Label('Please choose the feature to be displayed: '),
-        dcc.Dropdown(ft_name_list, ft_name_list[0], 
+        dcc.Dropdown(id="csi-feature-multi-dynamic-dropdown", 
+                     multi=True,
+                     options= dict(zip(train_data['raw_X'].columns.to_list(), 
+                                       train_data['raw_X'].columns.to_list())),
+                     value= [],
                      style={'width': '50%', 'margin': 'left'}),
+        html.Label('Please choose the number of bins to be sliced: '),
+        dcc.Input(id="csi-num-of-bins",
+                  type='number',
+                  value=10,
+                  min=2,
+                  max=50,
+                  # restrict into integer
+                  step=1, 
+                  pattern=r'\d*'),
+        html.Br(),
         html.Br(),
         html.H4('GINI Index: ' + str(0.71), style={'textAlign': 'left', 'fontWeight': 'bold'}),
         html.Div([
                     html.H4('Characteristic Stability Index Table', style={'textAlign': 'center', 'fontWeight': 'bold'})
         ], style={'width': '100%', 'top': 0, 'left': 0, 'margin': 0}),
-        html.Div(csi_children),
+        html.Div(id="feature_related_viz", children = csi_children),
         html.Br(),
         html.Br()        
     ]) 
 
 
-results_layout = html.Div(children=[
-    html.Br(),
-    html.Br(),
-    html.Br(),
-    statistical_model_metrics_layout(train_data, test_data, 10),
-    html.Br(),
-    html.Br(),
-    feature_metrics_layout(train_data, test_data, 
-                           ['loan_amnt', 'int_rate', 'installment',], 
-                           10)
-    ])
+
 
