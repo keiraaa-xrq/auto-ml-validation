@@ -1,9 +1,9 @@
 # Landing Page Callbacks
-    """
-    Bugs Discovered/To Do:
+"""
+Bugs Discovered/To Do:
     - Seems like changing file after submitting one, doesn't change the dcc.Store input
     - Need to validate the hyperparams
-    """
+"""
 
 
 from auto_ml_validation.app.index import app
