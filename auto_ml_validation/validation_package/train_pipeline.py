@@ -2,10 +2,15 @@
 """
 
 from typing import *
+import logging
 import pandas as pd
 import numpy as np
 from .utils.utils import instantiate_clf
 from .algorithms.abstract_binary_classifier import AbstractBinaryClassifier
+from .utils.logger import setup_logger, log_info
+
+
+logger = setup_logger(logging.getLogger(__name__))
 
 
 def train(
@@ -35,6 +40,6 @@ def train(
     if save:
         clf.save_model(save_path)
     if verbose:
-        print(
-            f'Completed training {clf.name}; best threshold: {best_threshold}; best {metric}: max_score')
+        msg = f'Completed training {clf.name}; best threshold: {best_threshold}; best {metric}: max_score'
+        log_info(logger, msg)
     return clf, best_threshold
