@@ -34,7 +34,7 @@ def update_psi_score(num_of_bins):
                                                                          test_data)
         psi_score, psi_df = my_class.calculate_psi(num_of_bins)
 
-        return 'PSI Score: '+str(psi_score)
+        return 'PSI Score: '+ str(psi_score)
                
  
 

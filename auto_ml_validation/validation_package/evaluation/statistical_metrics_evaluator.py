@@ -30,8 +30,10 @@ class StatisticalMetricsEvaluator:
         """
         Calculate the value and generate output df for psi and csi.
         """
+        # print(train_values)
         train_count = train_values.groupby(
             pd.cut(train_values, bin_list)).count()
+        # print(train_count)
         train_perc = train_count.apply(
             lambda x: x / sum(train_count))
         test_count = test_values.groupby(
@@ -66,6 +68,7 @@ class StatisticalMetricsEvaluator:
     def calculate_psi(self, num_bins=10) -> float:
         train_proba = pd.Series(self.train_proba)
         test_proba = pd.Series(self.test_proba)
+        # print(train_proba)
         bin_list = np.arange(0, 1+1/num_bins, 1/num_bins).tolist()
         psi, output_df = self._generate_output(
             bin_list,
@@ -103,8 +106,6 @@ class StatisticalMetricsEvaluator:
             df_list.append(df)
         return df_list, csi_dict
 
-    def kstest(
-        self,
-        score_col_name: str
-    ) -> float:
-        return scipy.stats.ks_2samp(self.train_processed_X[score_col_name], self.test_processed_X[score_col_name])
+    def kstest(self) -> float:
+        return scipy.stats.ks_2samp(self.train_proba, 
+                                    self.test_proba)

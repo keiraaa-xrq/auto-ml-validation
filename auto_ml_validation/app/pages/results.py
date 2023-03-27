@@ -41,36 +41,16 @@ all_feature_list = ['loan_amnt', 'int_rate', 'installment', 'home_ownership', 'a
 train_data, test_data = {}, {}
 
 train_data['raw_X'] = train_set[all_feature_list]
-# print(train_data['raw_X'].columns)
-# Index(['loan_amnt', 'int_rate', 'installment', 'home_ownership', 'annual_inc',
-#        'verification_status', 'dti', 'delinq_2yrs', 'inq_last_6mths',
-#        'open_acc', 'pub_rec', 'revol_bal', 'total_acc', 'initial_list_status',
-#        'out_prncp', 'out_prncp_inv', 'total_pymnt', 'total_pymnt_inv',
-#        'total_rec_prncp', 'total_rec_int', 'total_rec_late_fee',
-#        'last_pymnt_amnt', 'collections_12_mths_ex_med', 'application_type',
-    #    'tot_coll_amt', 'tot_cur_bal', 'open_acc_6m', 'open_act_il',
-    #    'open_il_12m', 'open_il_24m', 'mths_since_rcnt_il', 'total_bal_il',
-    #    'il_util', 'open_rv_12m', 'open_rv_24m', 'max_bal_bc', 'all_util',
-    #    'total_rev_hi_lim', 'inq_fi', 'total_cu_tl', 'inq_last_12m',
-    #    'acc_open_past_24mths', 'avg_cur_bal', 'bc_open_to_buy', 'bc_util',
-    #    'delinq_amnt', 'mo_sin_old_il_acct', 'mo_sin_old_rev_tl_op',
-    #    'mo_sin_rcnt_rev_tl_op', 'mo_sin_rcnt_tl', 'mort_acc',
-    #    'mths_since_recent_bc', 'mths_since_recent_inq',
-    #    'num_accts_ever_120_pd', 'num_actv_bc_tl', 'num_actv_rev_tl',
-    #    'num_bc_sats', 'num_bc_tl', 'num_il_tl', 'num_op_rev_tl',
-    #    'num_rev_accts', 'num_rev_tl_bal_gt_0', 'num_sats',
-    #    'num_tl_90g_dpd_24m', 'num_tl_op_past_12m', 'pct_tl_nvr_dlq',
-    #    'percent_bc_gt_75', 'pub_rec_bankruptcies', 'tax_liens',
-    #    'tot_hi_cred_lim', 'total_bal_ex_mort', 'total_bc_limit',
-    #    'total_il_high_credit_limit', 'hardship_flag', 'debt_settlement_flag']
 train_data['processed_X'] = train_processed.drop(['loan_status'], axis=1)
 train_data['y'] = train_processed['loan_status']
-train_data['pred_proba'] = np.array([1-train_prob['probability'], train_prob['probability']])
+train_data['pred_proba'] =  np.transpose(np.array([1-train_prob['probability'], train_prob['probability']]))
 
 test_data['raw_X'] = test_set[all_feature_list]
 test_data['processed_X'] = test_processed.drop(['loan_status'], axis=1)
 test_data['y'] = test_processed['loan_status']
-test_data['pred_proba'] = np.array([1-test_prob['probability'], test_prob['probability']])
+test_data['pred_proba'] = np.transpose(np.array([1-test_prob['probability'], test_prob['probability']]))
+# print(test_data['pred_proba'])
+# print(test_data['pred_proba'][:, 1])
 ############## end of codes used to load dummy data, remove later #######################
 
 def statistical_model_metrics_layout(train_data: pd.DataFrame,
@@ -80,14 +60,14 @@ def statistical_model_metrics_layout(train_data: pd.DataFrame,
     my_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(train_data, 
                                                                          test_data)
     psi_score, psi_df = my_class.calculate_psi(number_of_bins)
-    print(psi_df)
+    # print(psi_df)
     # reset index as columns for display
     psi_df.columns = psi_df.columns.astype(str)
     psi_df = psi_df.reset_index()
     psi_df['index'] = psi_df['index'].astype(str)
     psi_df.rename(columns = {'index':'ranges'}, inplace = True)
     # print(psi_df)
-    ks_score = my_class.kstest('tot_cur_bal')
+    ks_score = my_class.kstest()
 
     if ks_score.pvalue <= 0.05:
         ks_string = str(ks_score.pvalue) + '. ' + ' Null hypothese (Training and Testing Set are from the same statistical distribution) is rejected.'
