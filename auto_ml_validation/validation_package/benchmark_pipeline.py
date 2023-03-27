@@ -54,17 +54,25 @@ def fit_model(
     Perform hyperparameter tuning and threshold optimisation.
     """
     start = time.time()
-    # select features
-    if verbose:
-        print(f'Selecting features for {clf.name}.')
-    features_selected = select_features(
-        clf, X_train, y_train, metric, n_jobs=n_jobs, verbose=verbose)
+    if feature_selection:
+        # select features
+        if verbose:
+            msg = f'Selecting features for {clf.name}.'
+            log_info(logger, msg)
+        features_selected = select_features(
+            clf, X_train, y_train, metric, n_jobs=n_jobs, verbose=verbose)
+        mid = time.time()
+        fs_dur = (mid - start) / 60
+        if verbose:
+            msg = f'Compeleted feature selection for {clf.name} in {fs_dur} mins.'
+            log_info(logger, msg)
+    else:
+        features_selected = X_train.columns.tolist()
     train_selected = X_train[features_selected]
     val_selected = X_val[features_selected]
     # training with hyperparameter tuning
     if verbose:
-        print(
-            f'Compeleted feature selection for {clf.name} in {fs_dur} mins. Start training.')
+        log_info(logger, f'Training {clf.name}.')
     clf.random_search(train_selected, y_train, metric,
                       n_jobs=n_jobs, verbose=verbose)
     # adjust threshold
@@ -87,7 +95,7 @@ def instantiate_clfs(n_sample: int) -> List[AbstractBinaryClassifier]:
     svc = SVClassifier()
     if n_sample < 10000:
         clfs = [dt, knn, lg, rf, xgb, svc]
-    elif n_sample < 20000:
+    elif n_sample < 15000:
         clfs = [dt, knn, lg, rf, xgb]
     else:
         clfs = [dt, lg, rf, xgb]
@@ -123,9 +131,9 @@ def compare_performance(
             best_threshold = threshold
             best_clf = clf
     if verbose:
-        print(
-            f"Best model is {best_clf_name} with {metric} of {best_score} at a threshold of {best_threshold}.")
-    return best_clf_name, output
+        msg = f"Best model is {best_clf.name} with {metric} of {best_score} at a threshold of {best_threshold}."
+        log_info(logger, msg)
+    return best_clf, output
 
 
 def auto_benchmark(
@@ -186,5 +194,9 @@ def save_benchmark_output(output: Dict, models_dir: str, result_path: str):
         clf = result.pop('model')
         clf.save_model(f'{models_dir}/{name}.pkl')
         results_dict[name] = result
-    with open(result_path, 'w') as fp:
-        json.dump(results_dict, fp)
+    try:
+        with open(result_path, 'w') as fp:
+            json.dump(results_dict, fp, cls=NpEncoder)
+    except Exception as e:
+        print('Error:', e)
+        print(results_dict)

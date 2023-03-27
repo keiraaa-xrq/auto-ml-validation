@@ -1,5 +1,6 @@
 """Replicate model training
 """
+
 from typing import *
 import logging
 import pandas as pd
@@ -38,4 +39,7 @@ def train(
     # save model
     if save:
         clf.save_model(save_path)
-    return proba_train, proba_others
+    if verbose:
+        msg = f'Completed training {clf.name}; best threshold: {best_threshold}; best {metric}: max_score'
+        log_info(logger, msg)
+    return clf, best_threshold

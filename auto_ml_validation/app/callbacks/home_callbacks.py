@@ -3,6 +3,7 @@
 Bugs Discovered/To Do:
     - Seems like changing file after submitting one, doesn't change the dcc.Store input
     - Need to validate the hyperparams
+    - Check if the metric AUCROC value is set properly so that the model can be tuned
 """
 
 
@@ -153,7 +154,6 @@ def update_dropdowns(contents, filename):
         
         # Process the data to get options for dropdowns
         target_var_options = cat_var_options = [{'label': col, 'value': col} for col in df.columns]
-        target_var_options = cat_var_options = [{'label': col, 'value': col} for col in df.columns]
         
         return target_var_options, cat_var_options
     
@@ -214,14 +214,75 @@ def update_auto_dataset_inputs(train_contents, test_contents, other_contents, tr
     else:
         return dash.no_update, dash.no_update, dash.no_update
     
-    # callback to update rep-data-output
-@app.callback(Output('rep-data-output', 'children'),
-              [Input('store-rep-data', 'data')])
-def update_rep_data_output(rep_data):
-    return json.dumps(rep_data, indent=2)
+# Callback to validate form, update content_div with loading spinner when submit_button is clicked
+@app.callback(
+    Output('content_div', 'children'), Output('validation-message', 'children'),
+    Input('submit-button', 'n_clicks'),
+    [State('store-rep-data','data'),
+    State('store-auto-data','data'),
+    State("model-dropdown", "value"),
+    State('train-dataset-upload', 'filename'),
+    State('train-auto-upload', 'filename'),
+    State('test-dataset-upload', 'filename'),
+    State('test-auto-upload', 'filename'),
+    State('target-var-input', 'value')],
+    prevent_initial_call=True,
+    precedence = 2,
+)
+def update_content_div(n_clicks, rep_data, auto_data, algorithm, train_rep, train_auto, test_rep, test_auto, target_var):
+    if n_clicks:
+        if algorithm is None:
+            return [rep_layout, auto_layout, submit_button], 'Please select an option from the algorithm dropdown.'
+        elif train_rep is None:
+            return [rep_layout, auto_layout, submit_button], 'Please upload the train dataset for replicating the model.'
+        elif train_auto is None:
+            return [rep_layout, auto_layout, submit_button], 'Please upload the train dataset for creating the auto-benchmarking model.'
+        elif test_rep is None:
+            return [rep_layout, auto_layout, submit_button], 'Please upload the test dataset for replicating the model.'
+        elif test_auto is None:
+            return [rep_layout, auto_layout, submit_button], 'Please upload the test dataset for creating the auto-benchmarking model.'
+        elif train_rep is not None and target_var is None:
+            return [rep_layout, auto_layout, submit_button], 'Please select the target variable.'
+        # TO DO: To validate hyperparams also
+        else:
+            return loading_layout, ''
+    else:
+        return [rep_layout, auto_layout, submit_button], ''
+    
+ # Callback to begin modeling process when submit_button is clicked   
+@app.callback(
+    Output("url", "pathname"),
+    [Input("loading-spinner", "loading_state")],
+    [State("store-project", "data"),
+     State("store-rep-data", "data"),
+     State("store-auto-data", "data"),
+     State('url', 'pathname')]
+)
+def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
+    if loading:
+        project_dict = json.loads(proj)
+        rep_dict = json.loads(rep_data[0])
+        auto_dict = json.loads(auto_data[0])
 
-# callback to update auto-data-output
-@app.callback(Output('auto-data-output', 'children'),
-              [Input('store-auto-data', 'data')])
-def update_auto_data_output(auto_data):
-    return json.dumps(auto_data, indent=2)
+        project_name = project_dict['Project Name']
+        algorithm = project_dict['Algorithm']
+        hyperparams = rep_dict['Hyperparams']
+        rep_train = pd.DataFrame(rep_dict['Train Data'])
+        rep_test = pd.DataFrame(rep_dict['Test Data'])
+        rep_other = [pd.DataFrame(rep_dict['Other Data'])] if not pd.DataFrame(rep_dict['Other Data']).empty else []
+        target = rep_dict['Target'].lower()
+        cat_cols = [col.lower() for col in rep_dict['Categorical Var']]
+        auto_train = pd.DataFrame(auto_dict['Train Data'])
+        auto_test = pd.DataFrame(auto_dict['Test Data'])
+        auto_other = [pd.DataFrame(auto_dict['Other Data'])] if not pd.DataFrame(auto_dict['Other Data']).empty else []
+        metric = auto_dict['Evaluation Metric']
+        bool_map = {"yes": True, "no": False}
+        feat_sel = bool_map.get(auto_dict['Feature Selection'])
+        
+        output = model_pipeline.autoML(project_name, algorithm, hyperparams, 
+                                       rep_train, rep_test, rep_other, target, cat_cols, 
+                                       auto_train, auto_test, auto_other, metric, feat_sel)
+        
+
+        return '/results'
+    return current_pathname 
