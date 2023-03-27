@@ -2,6 +2,7 @@ from typing import *
 import time
 import json
 import os
+import logging
 import pandas as pd
 from joblib import Parallel, delayed
 from .algorithms.abstract_binary_classifier import AbstractBinaryClassifier
@@ -13,6 +14,10 @@ from .algorithms.xgboost import XGBoostClassifier
 from .algorithms.support_vector_machine import SVClassifier
 from .feature_selection.feat_selection import AutoFeatureSelector
 from .utils.np_encoder import NpEncoder
+from .utils.logger import setup_logger, log_info
+
+
+logger = setup_logger(logging.getLogger(__name__))
 
 
 def select_features(
@@ -49,25 +54,17 @@ def fit_model(
     Perform hyperparameter tuning and threshold optimisation.
     """
     start = time.time()
-    if feature_selection:
-        # select features
-        if verbose:
-            print(f'Selecting features for {clf.name}.')
-        features_selected = select_features(
-            clf, X_train, y_train, metric, n_jobs=n_jobs, verbose=verbose)
-        mid = time.time()
-        fs_dur = (mid - start) / 60
-        if verbose:
-            print(
-                f'Compeleted feature selection for {clf.name} in {fs_dur} mins.')
-    else:
-        features_selected = X_train.columns.tolist()
-        
+    # select features
+    if verbose:
+        print(f'Selecting features for {clf.name}.')
+    features_selected = select_features(
+        clf, X_train, y_train, metric, n_jobs=n_jobs, verbose=verbose)
     train_selected = X_train[features_selected]
     val_selected = X_val[features_selected]
     # training with hyperparameter tuning
     if verbose:
-        print(f'Training {clf.name}.')
+        print(
+            f'Compeleted feature selection for {clf.name} in {fs_dur} mins. Start training.')
     clf.random_search(train_selected, y_train, metric,
                       n_jobs=n_jobs, verbose=verbose)
     # adjust threshold
@@ -89,8 +86,8 @@ def instantiate_clfs(n_sample: int) -> List[AbstractBinaryClassifier]:
     xgb = XGBoostClassifier()
     svc = SVClassifier()
     if n_sample < 10000:
-        clfs = [dt, knn] #[dt, knn, lg, rf, xgb, svc]
-    elif n_sample < 15000:
+        clfs = [dt, knn, lg, rf, xgb, svc]
+    elif n_sample < 20000:
         clfs = [dt, knn, lg, rf, xgb]
     else:
         clfs = [dt, lg, rf, xgb]
@@ -111,8 +108,8 @@ def compare_performance(
     for result in results:
         clf, threshold, score, dur, features_selected = result
         if verbose:
-            print(
-                f'Model: {clf.name}; threshold: {threshold}; {metric}: {score}; time taken: {dur:.2f} mins; number of features: {len(features_selected)}.')
+            msg = f'Model: {clf.name}; threshold: {threshold}; {metric}: {score}; time taken: {dur:.2f} mins; number of features: {len(features_selected)}.'
+            log_info(logger, msg)
         output[clf.name] = {
             'model': clf,
             'best_threshold': threshold,
@@ -127,8 +124,8 @@ def compare_performance(
             best_clf = clf
     if verbose:
         print(
-            f"Best model is {best_clf.name} with {metric} of {best_score} at a threshold of {best_threshold}.")
-    return best_clf, output
+            f"Best model is {best_clf_name} with {metric} of {best_score} at a threshold of {best_threshold}.")
+    return best_clf_name, output
 
 
 def auto_benchmark(
@@ -159,7 +156,7 @@ def auto_benchmark(
     # instantiate clfs
     clfs = instantiate_clfs(n_sample)
     if verbose:
-        print('Number of classifiers: ', len(clfs))
+        log_info(logger, f'Number of classifiers: {len(clfs)}')
     if mode == 'parallel':
         results = Parallel(n_jobs=-1)(
             delayed(fit_model)(clf, X_train, y_train, X_val, y_val, metric, feature_selection, n_jobs, verbose) for clf in clfs
@@ -189,9 +186,5 @@ def save_benchmark_output(output: Dict, models_dir: str, result_path: str):
         clf = result.pop('model')
         clf.save_model(f'{models_dir}/{name}.pkl')
         results_dict[name] = result
-    try:
-        with open(result_path, 'w') as fp:
-            json.dump(results_dict, fp, cls=NpEncoder)
-    except Exception as e:
-        print('Error:', e)
-        print(results_dict)
+    with open(result_path, 'w') as fp:
+        json.dump(results_dict, fp)
