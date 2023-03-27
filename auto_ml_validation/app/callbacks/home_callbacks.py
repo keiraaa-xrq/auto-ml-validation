@@ -1,4 +1,11 @@
 # Landing Page Callbacks
+    """
+    Bugs Discovered/To Do:
+    - Seems like changing file after submitting one, doesn't change the dcc.Store input
+    - Need to validate the hyperparams
+    """
+
+
 from auto_ml_validation.app.index import app
 from auto_ml_validation.app.pages.home import *
 from auto_ml_validation.validation_package import model_pipeline
@@ -235,6 +242,7 @@ def update_content_div(n_clicks, rep_data, auto_data, algorithm, train_rep, trai
             return [rep_layout, auto_layout, submit_button], 'Please upload the test dataset for creating the auto-benchmarking model.'
         elif train_rep is not None and target_var is None:
             return [rep_layout, auto_layout, submit_button], 'Please select the target variable.'
+        # TO DO: To validate hyperparams also
         else:
             return loading_layout, ''
     else:
@@ -273,10 +281,8 @@ def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
         output = model_pipeline.autoML(project_name, algorithm, hyperparams, 
                                        rep_train, rep_test, rep_other, target, cat_cols, 
                                        auto_train, auto_test, auto_other, metric, feat_sel)
-        print(output)
-        with open('data/validator_input/data.pkl', 'wb') as f:
-            pickle.dump(output, f)
+        
+
         return '/results'
-    
     return current_pathname 
 

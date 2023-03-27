@@ -2,8 +2,7 @@ from typing import *
 import pandas as pd
 import numpy as np
 from datetime import datetime
-import logging
-import time
+import pickle
 
 from auto_ml_validation.validation_package.algorithms.xgboost import XGBoostClassifier
 from auto_ml_validation.validation_package.algorithms.random_forest import RFClassifier
@@ -39,60 +38,50 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
     DATE = datetime.today().strftime('%Y-%m-%d')
     save_path = f'models/{project_name}_{algorithm}_{DATE}.pkl'
     output_dict = {}
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-    # Create a file handler and set the logging level
-    file_handler = logging.FileHandler('logs.log')
-    file_handler.setLevel(logging.INFO)
 
-    # Create a log formatter and add it to the file handler
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
+    re_train_data, re_other_data = run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, save_path)
 
-    # Add the file handler to the logger
-    logger.addHandler(file_handler)
-
-    # Log a message to indicate the start of the function
-    logger.info('Preparing...')
+    bm_train_data, bm_other_data = run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs =-1, mode = 'parallel')
+    output_dict = {'bm_train_data': bm_train_data, 'bm_other_data': bm_other_data, 're_train_data': re_train_data, 're_other_data': re_other_data}
     
-    try:
-        logger.info('Replicating the Model...')
-        vm_train_data, vm_other_data = run_model_replication(auto_train, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, save_path)
-        if feat_sel_bool:
-            logger.info('Performing feature selection...')
-        logger.info('Building the benchmark model...')
-        bm_train_data, bm_test_data = run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs =-1, mode = 'parallel')
-        output_dict = {'bm_train_data': bm_train_data, 'bm_test_data': bm_test_data, 'vm_train_data': vm_train_data, 'vm_other_data': vm_other_data}
-        logger.info('Almost done...')
-        
-        return output_dict
-    
-    except Exception as e:
-        logger.info(e)
+    # Save Output
+    with open(f'data/validator_input/{project_name}_{algorithm}_{DATE}_data.pkl', 'wb') as f:
+        pickle.dump(output_dict, f)
 
-def run_model_replication(auto_train, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, save_path):
+    return output_dict
+    
+
+def run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, save_path):
     """Full Cycle of Model Replication
     
     Returns:
         Tuple of two dictionaries, train and test
     """
+    auto_others = [auto_test] + auto_other # For Raw set to return
     rep_others = [rep_test] + rep_other  # Add rep_test to the beginning of the list
     rep_X_train, rep_y_train = split_x_y(rep_train, target)
 
     rep_others_X_y = [(split_x_y(each, target)) for each in rep_others]
 
-    valid_model, valid_threshold = replicate(rep_X_train, rep_y_train, *rep_others_X_y[0], algorithm, hyperparams, metric, save=True, save_path=save_path)
-    vm_train_proba = valid_model.predict_proba(rep_X_train)
-    
-    vm_others_proba = []
-    for X, y in rep_others_X_y:
-        proba = valid_model.predict_proba(X)
-        vm_others_proba.append(proba)
+    rep_model, valid_threshold = replicate(rep_X_train, rep_y_train, *rep_others_X_y[0], algorithm, hyperparams, metric, save=True, save_path=save_path)
+    re_train_proba = rep_model.predict_proba(rep_X_train)
 
-    vm_train_data = {'raw_X': auto_train, 'processed_X': rep_X_train, 'y': rep_y_train, 'pred_proba': vm_train_proba}
-    vm_other_data = {'raw_X':auto_other, 'processed_X': [tup[0] for tup in rep_others_X_y], 'y': [tup[1] for tup in rep_others_X_y], 'pred_proba': vm_others_proba}
+    # To predict for test and all other datasets
+    other_names = ["Other" + str(i+1) for i in range(len(rep_others)-1)]
+    re_others_proba = pd.DataFrame(columns=["Test"]+other_names)
+    for i, (X, y) in enumerate(rep_others_X_y):
+        pred_proba = rep_model.predict_proba(X)[:, 1]
+        if i == 0:
+            re_others_proba["Test"] = y
+            re_others_proba["Test_proba"] = pred_proba
+        else:
+            re_others_proba[other_names[i-1]] = y
+            re_others_proba[other_names[i-1]+"_proba"] = pred_proba
 
-    return vm_train_data, vm_other_data
+    re_train_data = {'raw_X': auto_train.drop(target, axis=1), 'processed_X': rep_X_train, 'y': rep_y_train, 'pred_proba': re_train_proba}
+    re_other_data = {'raw_X': [df.drop(columns=[target]) for df in auto_others], 'processed_X': [tup[0] for tup in rep_others_X_y], 'y': [tup[1] for tup in rep_others_X_y], 'pred_proba': re_others_proba}
+
+    return re_train_data, re_other_data
 
 def run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs, mode):
     """Full Cycle of Auto-Benchmarking
@@ -101,25 +90,40 @@ def run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, fe
         Tuple of two dictionaries, train and test
     """
     # Auto-Benchmarking
-    auto_others = [auto_test] + auto_other
-    full_auto_X_train, full_auto_y_train, auto_others = process_data(auto_train, auto_others, target, cat_cols)
-    
+    auto_others_raw = [auto_test] + auto_other
+    full_auto_X_train, full_auto_y_train, auto_others, col_mapping = process_data(auto_train, auto_others_raw, target, cat_cols)
+
     # Split to Train and Validation sets for building auto benchmark, here we split the train set and treat test and others set as out of sample
     auto_X_train, auto_X_val, auto_y_train, auto_y_val = split_train_val(full_auto_X_train, full_auto_y_train)
     
-    auto_X_test, auto_y_test = auto_others[0] # Get Test Set
     
     benchmark_model, benchmark_output = auto_benchmark(auto_X_train, auto_y_train, 
                                                     auto_X_val, auto_y_val, metric, feat_sel_bool, 
                                                     n_jobs=n_jobs, mode=mode, verbose=True)
+    
+    # To inverse OHE, col_mapping dictionary (k, v) where k is OHE processed column and v is original column
+    feats_selected = benchmark_output[benchmark_model.name]['features_selected']
+    feats_selected_mapped = [col_mapping.get(col, col) for col in feats_selected]
 
-    bm_train_proba = benchmark_model.predict_proba(full_auto_X_train) # full_auto_X_train[[benchmark_output[benchmark_model.name]['features_selected']]])
-    bm_test_proba = benchmark_model.predict_proba(auto_X_test) #auto_X_test[[benchmark_output[benchmark_model.name]['features_selected']]])
+    bm_train_proba = benchmark_model.predict_proba(full_auto_X_train[feats_selected])
+    # To predict for test and all other datasets
+    other_names = ["Other" + str(i+1) for i in range(len(auto_others)-1)]
+    bm_others_proba = pd.DataFrame(columns=["Test"]+other_names)
+    for i, (X, y) in enumerate(auto_others):
+        X_mapped = X[feats_selected]
+        pred_proba = benchmark_model.predict_proba(X_mapped)[:, 1]
+        if i == 0:
+            bm_others_proba["Test"] = y
+            bm_others_proba["Test_proba"] = pred_proba
+        else:
+            bm_others_proba[other_names[i-1]] = y
+            bm_others_proba[other_names[i-1]+"_proba"] = pred_proba
+            
+    best_auto_X_train = full_auto_X_train[feats_selected] 
+    best_auto_X_other = [tup[0][feats_selected] for tup in auto_others] 
     
+    bm_train_data = {'raw_X': auto_train[feats_selected_mapped], 'processed_X': best_auto_X_train, 'y': full_auto_y_train, 'pred_proba': bm_train_proba}
+    bm_other_data = {'raw_X': [df[feats_selected_mapped] for df in auto_others_raw], 'processed_X': best_auto_X_other, 'y': [tup[1] for tup in auto_others], 'pred_proba': bm_others_proba} 
+
     
-    best_auto_X_train = full_auto_X_train #full_auto_X_train[[benchmark_output[benchmark_model.name]['features_selected']]] Need to re-look as need to inverse transform
-    best_auto_X_test = auto_X_test #auto_X_test[[benchmark_output[benchmark_model.name]['features_selected']]]
-    
-    bm_train_data = {'raw_X': auto_train, 'processed_X': best_auto_X_train, 'y': full_auto_y_train, 'pred_proba': bm_train_proba}
-    bm_test_data = {'raw_X': auto_test, 'processed_X': best_auto_X_test, 'y': auto_y_test, 'pred_proba': bm_test_proba} # Only return the test data
-    return bm_train_data, bm_test_data
+    return bm_train_data, bm_other_data

@@ -1,5 +1,6 @@
 from typing import *
 import pandas as pd
+import re
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
 from .utils.utils import check_columns
@@ -45,6 +46,19 @@ def process_features(
     X_train_cat = enc.fit_transform(X_train[cat_cols])
     X_train_cat = pd.DataFrame(
         X_train_cat, columns=enc.get_feature_names_out())
+    
+    # Dictionary Mapping
+    col_mapping = {}
+    for col_name in X_train[cat_cols]: # Mapping Categorical Variables
+        # Extract the column prefix using regex
+        col_prefix = re.findall(r'^[a-z]+', col_name)[0]
+        # Add the mapping to the dictionary
+        for ohe_col in X_train_cat.columns:
+            if col_prefix in ohe_col:
+                col_mapping[ohe_col] = col_name
+    for col in X_train.drop(cat_cols, axis=1).columns: # Mapping Numerical Variables
+        col_mapping[col] = col
+    
     # Standard Scaling
     num_variables = X_train.drop(cat_cols, axis=1).columns
     sc = StandardScaler()
@@ -60,7 +74,7 @@ def process_features(
         X_num = pd.DataFrame(X_num, columns=num_variables)
         X_processed = pd.concat([X_cat, X_num], axis=1)
         X_others_processed.append(X_processed)
-    return X_train_processed, X_others_processed
+    return X_train_processed, X_others_processed, col_mapping
 
 
 def process_data(
@@ -78,7 +92,7 @@ def process_data(
         X, y = split_x_y(df, target)
         X_others.append(X)
         y_others.append(y)
-    X_train_processed, X_others_processed = process_features(
+    X_train_processed, X_others_processed, col_mapping = process_features(
         X_train, X_others, cat_cols)
     others_processed = list(zip(X_others_processed, y_others))
-    return X_train_processed, y_train, others_processed
+    return X_train_processed, y_train, others_processed, col_mapping
