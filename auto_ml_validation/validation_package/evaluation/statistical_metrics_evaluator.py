@@ -3,7 +3,6 @@ import math
 import pandas as pd
 import numpy as np
 import scipy
-from ..utils.utils import check_columns
 
 
 class StatisticalMetricsEvaluator:

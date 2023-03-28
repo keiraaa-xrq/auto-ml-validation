@@ -35,18 +35,19 @@ def evaluation_pipeline(
     print("Model performance metrics evaluation done!")
 
     # statistical
-    # print("Evaluating statistical metrics...")
-    # sme = StatisticalMetricsEvaluator(train, test, num_of_bins)
-    # psi, psi_df = sme.calculate_psi(score_col_name='loan_status')
-    # csi_list, csi_dict = sme.csi_for_all_features()
-    # ks = sme.kstest()
-    # print("Statistical metrics evaluation done!")
+    print("Evaluating statistical metrics...")
+    sme = StatisticalMetricsEvaluator(train, test)
+    psi, psi_df = sme.calculate_psi()
+    csi_list, csi_dict = sme.csi_for_all_features(selected_features)
+    ks = {k: sme.kstest(k) for k in selected_features}
+    print("Statistical metrics evaluation done!")
 
     # fairness
 
+
     # transparency
     print("Evaluating transparency metrics...")
-    tme = TransparencyMetricsEvaluator(model, test['processed_X'].iloc[0:2500, :], test['y'].iloc[0:2500, :])  # for testing
+    tme = TransparencyMetricsEvaluator(model, train['processed_X'].iloc[0:2500, :], train['y'].iloc[0:2500, :])  # for testing
     local_lime_fig, global_lime_fig, local_lime_lst, global_lime_map = tme.lime_interpretability()
     local_shap_fig, global_shap_fig, local_impt_map, global_impt_map = tme.shap_interpretability()
     gini = tme.cal_gini()
@@ -54,12 +55,12 @@ def evaluation_pipeline(
 
     return {
             "dist": dist, "lift": lift, "pr": pr, "roc": roc, "confusion": confusion,
-            "local_lime_fig": local_lime_fig, "global_lime_fig": global_lime_fig, "local_shap_fig": local_shap_fig, "global_shap_fig": global_shap_fig, 
+            "local_lime": local_lime_fig, "global_lime": global_lime_fig, "local_shap": local_shap_fig, "global_shap": global_shap_fig, 
         }, {
             "metrics": metrics, "gini": gini, "auc": auc, 
-            "local_lime_map": local_lime_lst, "global_lime_map": global_lime_map, "local_impt_map": local_impt_map, "global_impt_map": global_impt_map,
-            # "psi": psi, "psi_df": psi_df, 
-            # "csi_list": csi_list, "csi_dict": csi_dict, "ks": ks
+            "local_lime": local_lime_lst, "global_lime": global_lime_map, "local_shap": local_impt_map, "global_shap": global_impt_map,
+            "psi": psi, "psi_df": psi_df, 
+            "csi_list": csi_list, "csi_dict": csi_dict, "ks": ks
         }
 
 
