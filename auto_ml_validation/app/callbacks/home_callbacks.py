@@ -262,12 +262,12 @@ def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
         hyperparams = rep_dict['Hyperparams']
         rep_train = pd.DataFrame(rep_dict['Train Data'])
         rep_test = pd.DataFrame(rep_dict['Test Data'])
-        rep_other = [pd.DataFrame(rep_dict['Other Data'])] if not pd.DataFrame(rep_dict['Other Data']).empty else []
+        rep_other = [pd.DataFrame(rep_dict['Other Data'])] if 'Other Data' in rep_dict else []
         target = rep_dict['Target'].lower()
         cat_cols = [col.lower() for col in rep_dict['Categorical Var']]
         auto_train = pd.DataFrame(auto_dict['Train Data'])
         auto_test = pd.DataFrame(auto_dict['Test Data'])
-        auto_other = [pd.DataFrame(auto_dict['Other Data'])] if not pd.DataFrame(auto_dict['Other Data']).empty else []
+        auto_other = [pd.DataFrame(auto_dict['Other Data'])] if 'Other Data' in auto_dict else []
         metric = auto_dict['Evaluation Metric']
         bool_map = {"yes": True, "no": False}
         feat_sel = bool_map.get(auto_dict['Feature Selection'])
@@ -304,6 +304,6 @@ def update_loading_text(n_intervals):
 )
 def update_interval(loading_text):
     if loading_text in ["Preparing...", "Almost done...", "Replicating the model..."]:
-        return 5000
+        return 2000
     else:
         return 30000 

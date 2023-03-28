@@ -70,7 +70,8 @@ def run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test
     rep_others_X_y = [(split_x_y(each, target)) for each in rep_others]
     rep_model, valid_threshold = replicate(rep_X_train, rep_y_train, *rep_others_X_y[0], algorithm, hyperparams, metric, save=True, save_path=save_path)
     re_train_proba = rep_model.predict_proba(rep_X_train)
-
+    
+    re_train_data = {'raw_X': auto_train.drop(target, axis=1), 'processed_X': rep_X_train, 'y': rep_y_train, 'pred_proba': re_train_proba}
     re_other_data = {}
     for i, (X,y) in enumerate(rep_others_X_y):
         key = "Test" if i == 0 else f"Other{i}"
@@ -78,24 +79,8 @@ def run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test
         re_other_data[key]['raw_X'] = auto_others[i].drop(columns=[target])
         re_other_data[key]['processed_X'] = rep_others_X_y[i][0]
         re_other_data[key]['y'] = [tup[1] for tup in rep_others_X_y][i]
-        pred_proba = rep_model.predict_proba(rep_others_X_y[i][0])
-        re_other_data[key]['pred_proba'] = pd.DataFrame(pred_proba, columns=["proba_0", "proba_1"])
-
-    """
-    # To predict for test and all other datasets
-    other_names = ["Other" + str(i+1) for i in range(len(rep_others)-1)]
-    re_others_proba = pd.DataFrame(columns=["Test"]+other_names)
-    for i, (X, y) in enumerate(rep_others_X_y):
-        pred_proba = rep_model.predict_proba(X)[:, 1] # Give both, proba of both 0 and 1
-        if i == 0:
-            re_others_proba["Test"] = y
-            re_others_proba["Test_proba"] = pred_proba
-        else:
-            re_others_proba[other_names[i-1]] = y
-            re_others_proba[other_names[i-1]+"_proba"] = pred_proba
-    """
-    re_train_data = {'raw_X': auto_train.drop(target, axis=1), 'processed_X': rep_X_train, 'y': rep_y_train, 'pred_proba': re_train_proba}
-    #re_other_data = {'raw_X': [df.drop(columns=[target]) for df in auto_others], 'processed_X': [tup[0] for tup in rep_others_X_y], 'y': [tup[1] for tup in rep_others_X_y], 'pred_proba': re_others_proba}
+        #pred_proba = 
+        re_other_data[key]['pred_proba'] = rep_model.predict_proba(rep_others_X_y[i][0])# pd.DataFrame(pred_proba, columns=["proba_0", "proba_1"])
 
     return re_train_data, re_other_data
 
@@ -122,19 +107,9 @@ def run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, fe
 
     bm_train_proba = benchmark_model.predict_proba(full_auto_X_train[feats_selected])
     # To predict for test and all other datasets
-    """
-    other_names = ["Other" + str(i+1) for i in range(len(auto_others)-1)]
-    bm_others_proba = pd.DataFrame(columns=["Test"]+other_names)
-    for i, (X, y) in enumerate(auto_others):
-        X_mapped = X[feats_selected]
-        pred_proba = benchmark_model.predict_proba(X_mapped)
-        if i == 0:
-            bm_others_proba["Test"] = y
-            bm_others_proba["Test_proba"] = pred_proba
-        else:
-            bm_others_proba[other_names[i-1]] = y
-            bm_others_proba[other_names[i-1]+"_proba"] = pred_proba
-    """
+    best_auto_X_train = full_auto_X_train[feats_selected] 
+    bm_train_data = {'raw_X': auto_train[feats_selected_mapped].T.drop_duplicates().T, 'processed_X': best_auto_X_train, 'y': full_auto_y_train, 'pred_proba': bm_train_proba}
+
     bm_other_data = {}
     for i, (X,y) in enumerate(auto_others):
         key = "Test" if i == 0 else f"Other{i}"
@@ -142,14 +117,9 @@ def run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, fe
         bm_other_data[key]['raw_X'] = auto_others_raw[i][feats_selected_mapped].T.drop_duplicates().T
         bm_other_data[key]['processed_X'] = auto_others[i][0][feats_selected]
         bm_other_data[key]['y'] = auto_others[i][1]
-        pred_proba = benchmark_model.predict_proba(auto_others[i][0])
-        bm_other_data[key]['pred_proba'] = pd.DataFrame(pred_proba, columns=["proba_0", "proba_1"])
+        #pred_proba = 
+        bm_other_data[key]['pred_proba'] = benchmark_model.predict_proba(auto_others[i][0][feats_selected]) #pd.DataFrame(pred_proba, columns=["proba_0", "proba_1"])
              
-    best_auto_X_train = full_auto_X_train[feats_selected] 
-   # best_auto_X_other = [tup[0][feats_selected] for tup in auto_others] 
     
-    bm_train_data = {'raw_X': auto_train[feats_selected_mapped].T.drop_duplicates().T, 'processed_X': best_auto_X_train, 'y': full_auto_y_train, 'pred_proba': bm_train_proba}
-    #bm_other_data = {'raw_X': [df[feats_selected_mapped] for df in auto_others_raw], 'processed_X': best_auto_X_other, 'y': [tup[1] for tup in auto_others], 'pred_proba': bm_others_proba} 
-
     
     return bm_train_data, bm_other_data

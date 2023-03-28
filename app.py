@@ -27,8 +27,7 @@ def display_page(pathname):
 
 
 ########################## Layout ##########################
-app.layout = html.Div([
-                       navbar,
+app.layout = html.Div([navbar,
                        content
                        ])
 
