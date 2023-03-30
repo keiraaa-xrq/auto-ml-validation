@@ -1,14 +1,14 @@
 # Landing Page Callbacks
 """
 Bugs Discovered/To Do:
-    - Seems like changing file after submitting one, doesn't change the dcc.Store input
-    - Need to validate the hyperparams
-    - Separate each log file by project
-    - Test other models, seem like hyperparams have issue with other models other than RF
+    - To change the dropdownlist to checkbox
+    - Validate categorical variable and check if target variable is binary
+    - Follow up on bug that is occurring when parse_data/save_data is happening before validating, use dcc.Store to interact the two callbacks
 """
 from auto_ml_validation.app.index import app
 from auto_ml_validation.app.pages.home import *
 from auto_ml_validation.validation_package import model_pipeline
+from auto_ml_validation.validation_package.utils.utils import instantiate_clf
 
 import pandas as pd
 import io
@@ -211,45 +211,67 @@ def update_auto_dataset_inputs(train_contents, test_contents, other_contents, tr
 @app.callback(
     Output('content_div', 'children'), Output('validation-message', 'children'),
     Input('submit-button', 'n_clicks'),
-    [State('store-rep-data','data'),
-    State('store-auto-data','data'),
+    [State('hyperparams-upload', 'contents'), State('hyperparams-upload', 'filename'),
     State("model-dropdown", "value"),
-    State('train-dataset-upload', 'filename'),
-    State('train-auto-upload', 'filename'),
-    State('test-dataset-upload', 'filename'),
-    State('test-auto-upload', 'filename'),
+    State('train-dataset-upload', 'content'), State('train-dataset-upload', 'filename'),
+    State('train-auto-upload', 'content'), State('train-auto-upload', 'filename'),
+    State('test-dataset-upload', 'content'), State('test-dataset-upload', 'filename'),
+    State('test-auto-upload', 'content'), State('test-auto-upload', 'filename'),
+    State('other-dataset-upload', 'contents'), State('other-dataset-upload', 'filename'),
+    State('other-auto-upload', 'contents'), State('other-auto-upload', 'filename'),
     State('target-var-input', 'value')],
     prevent_initial_call=True,
 )
-def update_content_div(n_clicks, rep_data, auto_data, algorithm, train_rep, train_auto, test_rep, test_auto, target_var):
-    if n_clicks:
-        if algorithm is None:
-            return [rep_layout, auto_layout, submit_button], 'Please select an option from the algorithm dropdown.'
-        elif train_rep is None:
-            return [rep_layout, auto_layout, submit_button], 'Please upload the train dataset for replicating the model.'
-        elif train_auto is None:
-            return [rep_layout, auto_layout, submit_button], 'Please upload the train dataset for creating the auto-benchmarking model.'
-        elif test_rep is None:
-            return [rep_layout, auto_layout, submit_button], 'Please upload the test dataset for replicating the model.'
-        elif test_auto is None:
-            return [rep_layout, auto_layout, submit_button], 'Please upload the test dataset for creating the auto-benchmarking model.'
-        elif train_rep is not None and target_var is None:
-            return [rep_layout, auto_layout, submit_button], 'Please select the target variable.'
-        # TO DO: To validate hyperparams also
-        else:
-            return loading_layout, ''
-    else:
+def validate_inputs(n_clicks, hyperparams_content, hyperparams_file, algorithm, 
+                    train_rep_content, train_rep_file, train_auto_content, train_auto_file, 
+                    test_rep_content, test_rep_file, test_auto_content, test_auto_file, 
+                    other_rep_content, other_rep_file, other_auto_content, other_auto_file, target_var):
+    # Check if the submit button has been clicked
+    if not n_clicks:
         return [rep_layout, auto_layout, submit_button], ''
-    
+    # Check if an algorithm has been selected
+    if algorithm is None:
+        return [rep_layout, auto_layout, submit_button], 'Please select an option from the algorithm dropdown.'
+    # Check if all required files have been uploaded
+    if not all([train_rep_file, test_rep_file, train_auto_file, test_auto_file]):
+        return [rep_layout, auto_layout, submit_button], 'Please upload all the required dataset files.'
+    # Check if the target variable has been selected for the replication dataset
+    if train_rep_file and not target_var:
+        return [rep_layout, auto_layout, submit_button], 'Please select the target variable.'
+    # Try to parse all uploaded dataset files
+    try:
+        train_rep = parse_data(train_rep_content, train_rep_file) if train_rep_content else None
+        train_auto = parse_data(train_auto_content, train_auto_file) if train_auto_content else None
+        test_rep = parse_data(test_rep_content, test_rep_file) if test_rep_content else None
+        test_auto = parse_data(test_auto_content, test_auto_file) if test_auto_content else None
+        other_rep = parse_data(other_rep_content, other_rep_file) if other_rep_content else None
+        other_auto = parse_data(other_auto_content, other_auto_file) if other_auto_content else None
+    except Exception as e:
+        # Return an error message if any of the files could not be parsed
+        file_type = 'training replication' if train_rep_content else 'auto benchmarking training' if train_auto_content else 'testing replication' if test_rep_content else 'auto benchmarking testing' if test_auto_content else 'other dataset replication' if other_rep_content else 'auto benchmarking for other dataset'
+        return [rep_layout, auto_layout, submit_button], f'Please upload the correct file for {file_type}. Accepted formats are csv, xls, txt, tsv.'
+    # Check if hyperparameters have been provided
+    if hyperparams_content:
+        try:
+            # Try to parse hyperparameters and instantiate the model
+            params = parse_data(hyperparams_content, hyperparams_file)
+            clf = instantiate_clf(algorithm, params)
+            return loading_layout, ''
+        except Exception:
+            # Return an error message if the hyperparameters could not be parsed or the model could not be instantiated
+            return [rep_layout, auto_layout, submit_button], 'Please upload the correct hyperparameters for the model in a JSON file.'
+    # If all checks pass, return the loading layout
+    return loading_layout, ''
+
 # Callback to begin modeling process when submit_button is clicked   
 @app.callback(
-    Output("url", "pathname"),
+    Output("url", "pathname"), Output("failed-modeling-message", "children"),
     [Input("loading-spinner", "loading_state"),
      Input("store-project", "data"),
      Input("store-rep-data", "data")],
-     [State("store-auto-data", "data"),
+    [State("store-auto-data", "data"),
      State('url', 'pathname')],
-     prevent_initial_call=True
+    prevent_initial_call=True
 )
 def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
     if loading:
@@ -271,12 +293,15 @@ def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
         metric = auto_dict['Evaluation Metric']
         bool_map = {"yes": True, "no": False}
         feat_sel = bool_map.get(auto_dict['Feature Selection'])
-        
-        output = model_pipeline.autoML(project_name, algorithm, hyperparams, 
+        try:
+            output = model_pipeline.autoML(project_name, algorithm, hyperparams, 
                                        rep_train, rep_test, rep_other, target, cat_cols, 
                                        auto_train, auto_test, auto_other, metric, feat_sel)
-        
-        return '/results'
+        except Exception as e:
+            return '/home', f"Model Building has failed. Error: {e}. Please try again. "
+
+        return '/results', ""
+    
     return current_pathname 
 
 # Callback to periodically update progress text
@@ -299,11 +324,11 @@ def update_loading_text(n_intervals):
 
 # Callback to change interval timing  based on last loading text
 @app.callback(
-    Output("interval-component", "interval"), 
+    Output("interval-component", "interval"),
     [Input("loading-text", "children")]
 )
 def update_interval(loading_text):
     if loading_text in ["Preparing...", "Almost done...", "Replicating the model..."]:
-        return 2000
+        return 1000
     else:
-        return 30000 
+        return 30000

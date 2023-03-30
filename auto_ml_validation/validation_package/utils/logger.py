@@ -24,3 +24,8 @@ def setup_logger(logger: logging.Logger, filepath: str = None) -> logging.Logger
 def log_info(logger: logging.Logger, msg: str):
     print(msg)
     logger.info(msg)
+
+        
+def log_error(logger: logging.Logger, msg: str):
+    print(msg)
+    logger.error(msg)

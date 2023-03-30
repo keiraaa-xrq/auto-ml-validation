@@ -39,7 +39,8 @@ def project_field():
             )
         ]),
         html.Br(),
-        html.Div(id="validation-message", style={"color": "red", 'textAlign': 'center'})
+        html.Div(id="validation-message", style={"color": "red", 'textAlign': 'center'}),
+        html.Div(id="failed-modeling-message", style={"color": "red", 'textAlign': 'center'})
         ]
 
     form = dbc.Form(form_fields, id="form")

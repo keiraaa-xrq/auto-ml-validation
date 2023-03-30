@@ -10,7 +10,7 @@ from auto_ml_validation.validation_package.algorithms.random_forest import RFCla
 from auto_ml_validation.validation_package.process_data import split_x_y, process_data, split_train_val
 from auto_ml_validation.validation_package.benchmark_pipeline import auto_benchmark, save_benchmark_output
 from auto_ml_validation.validation_package.train_pipeline import train as replicate
-from .utils.logger import setup_logger, log_info
+from .utils.logger import setup_logger, log_info, log_error
 
 logger = setup_logger(logging.getLogger(__name__))
 
@@ -40,12 +40,23 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
     # Variables and Logging
     DATE = datetime.today().strftime('%Y-%m-%d')
     save_path = f'models/{project_name}_{algorithm}_{DATE}.pkl'
-    output_dict = {}
-    log_info(logger, 'Replicating the model...')
-    re_train_data, re_other_data = run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, save_path)
+    output_dict = bm_train_data = bm_other_data =  re_train_data = re_other_data = {}
     
-    log_info(logger, 'Creating the benchmark model...')
-    bm_train_data, bm_other_data = run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs =-1, mode = 'parallel')
+    try:
+        log_info(logger, 'Replicating the model...')
+        re_train_data, re_other_data = run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, save_path)
+    except Exception as e:
+        error_message = "Returning to homepage... An error occured while replicating the model: %s." % str(e)
+        log_error(logger, error_message)
+        raise e
+
+    try:
+        log_info(logger, 'Creating the benchmark model...')
+        bm_train_data, bm_other_data = run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs =-1, mode = 'parallel')
+    except Exception as e:
+        error_message = "Returning to homepage... An error occured while creating the benchmark model: %s. " % str(e)
+        log_error(logger, error_message)
+        raise e
     
     output_dict = {'bm_train_data': bm_train_data, 'bm_other_data': bm_other_data, 're_train_data': re_train_data, 're_other_data': re_other_data}
     log_info(logger, 'Almost done...')
