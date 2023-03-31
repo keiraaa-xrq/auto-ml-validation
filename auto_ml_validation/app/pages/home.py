@@ -59,7 +59,18 @@ def rep_dataset_layout() -> html.Div:
     Returns:
         html.Div: html element consisting of form input for user
     """
-
+    # Create the checklist dropdown
+    cat_var_dropdown = dbc.DropdownMenu(
+        label="Select Options",
+        children=[
+            dbc.Checklist(
+                options=[],
+                value=[],
+                id="cat-var-input",
+                inline=True,
+            ),
+        ],
+    )
     return html.Div([
         # New Heading
         html.Div([
@@ -151,9 +162,10 @@ def rep_dataset_layout() -> html.Div:
             html.P('Please indicate the target variable name:'),
             dcc.Dropdown(id='target-var-input', value='', options = [], style={'width': '100%'}),
             html.P('Please indicate all categorical variables:'),
-            dcc.Dropdown(id='cat-var-input', value='', options = [], multi=True, style={'width': '100%'})
-            ], style={'textAlign': 'center', 'margin': 'auto', 'maxWidth': '800px', 'paddingTop': '50px'})
-            ],
+            cat_var_dropdown
+            ], style={'textAlign': 'center', 'margin': 'auto', 'maxWidth': '800px', 'paddingTop': '50px'}),
+            dcc.Textarea(id='selected-options', value='', readOnly=True, style={'margin-top': '20px', 'width': '78%', 'height': '80%'})
+            ], 
         style=container_style
         )
   

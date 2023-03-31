@@ -1,8 +1,6 @@
 # Landing Page Callbacks
 """
 Bugs Discovered/To Do:
-    - To change the dropdownlist to checkbox
-    - Validate categorical variable and check if target variable is binary
     - Follow up on bug that is occurring when parse_data/save_data is happening before validating, use dcc.Store to interact the two callbacks
 """
 from auto_ml_validation.app.index import app
@@ -35,6 +33,7 @@ home_layout = html.Div([
     dcc.Store(id='store-project', data={}, storage_type='memory'), # Dictionary of Project Config {project name: value, algorithm: value}
     dcc.Store(id='store-rep-data', data = {}, storage_type ='session'), # Dictionary of Replicating Model Data {Hyperparamaters: Value, Train Dataset: Value, Test Dataset: Value, Other Dataset: Value, Target: Value, Categorical Variable: Value}
     dcc.Store(id='store-auto-data', data = {}, storage_type ='session'), # Dictionary of AutoBenchmarking Model Data {Train Dataset: Value, Test Dataset: Value, Other Dataset: Value, Metric: Value, Auto Feat Selection: Yes/No}
+
 ])
 
 # Callback
@@ -78,58 +77,6 @@ def update_rep_dataset_inputs(hyperparams_contents, train_contents, test_content
     else:
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
-# Save Data and Configure Input Variables (For Replicating)
-@app.callback(
-    Output('store-rep-data', 'data'),
-    [Input('submit-button', 'n_clicks'),
-    State('hyperparams-upload', 'contents'), State('hyperparams-upload', 'filename'),
-    State('train-dataset-upload', 'contents'), State('train-dataset-upload', 'filename'),
-    State('test-dataset-upload', 'contents'), State('test-dataset-upload', 'filename'),
-    State('other-dataset-upload', 'contents'), State('other-dataset-upload', 'filename'),
-    State('target-var-input', 'value'), 
-    State('cat-var-input', 'value')],
-    prevent_initial_call=True,
-)
-def save_rep_data(n_clicks, hyperparams_contents, hyperparams_filename, train_contents, train_filename, test_contents, test_filename, other_contents, other_filename, target, cat_var):
-    if not n_clicks:
-        raise PreventUpdate
-    ctx = dash.callback_context
-    if ctx.triggered[0]['prop_id'] == 'submit-button.n_clicks':
-        rep_data = {}
-        if hyperparams_contents is not None:
-            rep_data['Hyperparams'] = parse_data(hyperparams_contents, hyperparams_filename)
-        if train_contents is not None:
-            rep_data['Train Data'] = parse_data(train_contents, train_filename).to_dict()
-        if test_contents is not None:
-            rep_data['Test Data'] = parse_data(test_contents, test_filename).to_dict()
-        if other_contents is not None:
-            rep_data['Other Data'] = parse_data(other_contents, other_filename).to_dict()
-        rep_data['Target'] = target
-        rep_data['Categorical Var'] = cat_var
-        return [json.dumps(rep_data)]
-    else:
-        raise PreventUpdate
-
-def parse_data(content, filename):
-    """Helper function to parse data in format of csv/xls/txt into pandas dataframe
-    Args:
-        content (_type_): file content
-        filename (_type_): file name
-    Returns:
-        dat: Dictionary or train/test/other dataframe
-    """
-    content_type, content_string = content.split(',')
-    decoded = base64.b64decode(content_string)
-    if 'json' in filename:
-        dat = json.loads(decoded)
-    elif "csv" in filename:
-        dat = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-    elif "xls" in filename:
-        dat = pd.read_excel(io.BytesIO(decoded))
-    elif "txt" or "tsv" in filename:
-        dat = pd.read_csv(io.StringIO(decoded.decode("utf-8")), delimiter=r"\s+")
-    return dat
-
 # Populate Dropdown list
 @app.callback(
     [Output('target-var-input', 'options'), Output('cat-var-input', 'options')],
@@ -155,34 +102,17 @@ def update_dropdowns(contents, filename):
     
     return [], []
 
-# Save Data and Configure Input Variables (For Auto-Benchmarking)
+# Populate selected categorical variables in textbox
 @app.callback(
-    Output('store-auto-data', 'data'),
-    Input('submit-button', 'n_clicks'),
-    [State('eval-metric-dropdown', 'value'), 
-    State('auto-feat-select-radio', 'value'),
-    State('train-auto-upload', 'contents'), State('train-auto-upload', 'filename'),
-    State('test-auto-upload', 'contents'), State('test-auto-upload', 'filename'),
-    State('other-auto-upload', 'contents'), State('other-auto-upload', 'filename')],
-    prevent_initial_call=True,
+    Output('selected-options', 'value'),
+    [Input('cat-var-input', 'value')]
 )
-def save_auto_data(n_clicks, eval_metric, auto_feat_selection, train_contents, train_filename, test_contents, test_filename, other_contents, other_filename):
-    if n_clicks is None:
-        raise PreventUpdate
-    ctx = dash.callback_context
-    if ctx.triggered[0]['prop_id'] == 'submit-button.n_clicks':
-        auto_data = {}
-        if train_contents is not None:
-            auto_data['Train Data'] = parse_data(train_contents, train_filename).to_dict()
-        if test_contents is not None:
-            auto_data['Test Data'] = parse_data(test_contents, test_filename).to_dict()
-        if other_contents is not None:
-            auto_data['Other Data'] = parse_data(other_contents, other_filename).to_dict()
-        auto_data['Evaluation Metric'] = eval_metric
-        auto_data['Feature Selection'] = auto_feat_selection
-        return [json.dumps(auto_data)]
+def update_selected_options(selected_options):
+    if selected_options is None:
+        return ''
     else:
-        raise PreventUpdate
+        return ', '.join(selected_options)
+    
     
 # Update File Paths in input text box for Auto-Benchmarking Model
 @app.callback(
@@ -207,37 +137,43 @@ def update_auto_dataset_inputs(train_contents, test_contents, other_contents, tr
     else:
         return dash.no_update, dash.no_update, dash.no_update
     
-# Callback to validate form, update content_div with loading spinner when submit_button is clicked
+# Validate form, save data for replication and auto-benchmarking, update content_div with loading spinner when submit_button is clicked
 @app.callback(
     Output('content_div', 'children'), Output('validation-message', 'children'),
+    Output('store-rep-data', 'data'), Output('store-auto-data', 'data'),
     Input('submit-button', 'n_clicks'),
     [State('hyperparams-upload', 'contents'), State('hyperparams-upload', 'filename'),
     State("model-dropdown", "value"),
-    State('train-dataset-upload', 'content'), State('train-dataset-upload', 'filename'),
-    State('train-auto-upload', 'content'), State('train-auto-upload', 'filename'),
-    State('test-dataset-upload', 'content'), State('test-dataset-upload', 'filename'),
-    State('test-auto-upload', 'content'), State('test-auto-upload', 'filename'),
+    State('train-dataset-upload', 'contents'), State('train-dataset-upload', 'filename'),
+    State('train-auto-upload', 'contents'), State('train-auto-upload', 'filename'),
+    State('test-dataset-upload', 'contents'), State('test-dataset-upload', 'filename'),
+    State('test-auto-upload', 'contents'), State('test-auto-upload', 'filename'),
     State('other-dataset-upload', 'contents'), State('other-dataset-upload', 'filename'),
     State('other-auto-upload', 'contents'), State('other-auto-upload', 'filename'),
-    State('target-var-input', 'value')],
+    State('target-var-input', 'value'),
+    State('cat-var-input', 'value'),
+    State('eval-metric-dropdown', 'value'), 
+    State('auto-feat-select-radio', 'value')],
     prevent_initial_call=True,
 )
 def validate_inputs(n_clicks, hyperparams_content, hyperparams_file, algorithm, 
                     train_rep_content, train_rep_file, train_auto_content, train_auto_file, 
                     test_rep_content, test_rep_file, test_auto_content, test_auto_file, 
-                    other_rep_content, other_rep_file, other_auto_content, other_auto_file, target_var):
+                    other_rep_content, other_rep_file, other_auto_content, other_auto_file, target_var, cat_var,
+                    eval_metric, auto_feat_selection):
+    
     # Check if the submit button has been clicked
-    if not n_clicks:
-        return [rep_layout, auto_layout, submit_button], ''
+    if n_clicks is None:
+        raise PreventUpdate
     # Check if an algorithm has been selected
     if algorithm is None:
-        return [rep_layout, auto_layout, submit_button], 'Please select an option from the algorithm dropdown.'
+        return [rep_layout, auto_layout, submit_button], 'Please select an option from the algorithm dropdown.', {}, {}
     # Check if all required files have been uploaded
     if not all([train_rep_file, test_rep_file, train_auto_file, test_auto_file]):
-        return [rep_layout, auto_layout, submit_button], 'Please upload all the required dataset files.'
+        return [rep_layout, auto_layout, submit_button], 'Please upload all the required dataset files.', {}, {}
     # Check if the target variable has been selected for the replication dataset
     if train_rep_file and not target_var:
-        return [rep_layout, auto_layout, submit_button], 'Please select the target variable.'
+        return [rep_layout, auto_layout, submit_button], 'Please select the target variable.', {}, {}
     # Try to parse all uploaded dataset files
     try:
         train_rep = parse_data(train_rep_content, train_rep_file) if train_rep_content else None
@@ -249,23 +185,57 @@ def validate_inputs(n_clicks, hyperparams_content, hyperparams_file, algorithm,
     except Exception as e:
         # Return an error message if any of the files could not be parsed
         file_type = 'training replication' if train_rep_content else 'auto benchmarking training' if train_auto_content else 'testing replication' if test_rep_content else 'auto benchmarking testing' if test_auto_content else 'other dataset replication' if other_rep_content else 'auto benchmarking for other dataset'
-        return [rep_layout, auto_layout, submit_button], f'Please upload the correct file for {file_type}. Accepted formats are csv, xls, txt, tsv.'
+        return [rep_layout, auto_layout, submit_button], f'Please upload the correct file for {file_type}. Accepted formats are csv, xls, txt, tsv.', {}, {}
     # Check if hyperparameters have been provided
     if hyperparams_content:
         try:
             # Try to parse hyperparameters and instantiate the model
             params = parse_data(hyperparams_content, hyperparams_file)
             clf = instantiate_clf(algorithm, params)
-            return loading_layout, ''
         except Exception:
             # Return an error message if the hyperparameters could not be parsed or the model could not be instantiated
-            return [rep_layout, auto_layout, submit_button], 'Please upload the correct hyperparameters for the model in a JSON file.'
-    # If all checks pass, return the loading layout
-    return loading_layout, ''
+            return [rep_layout, auto_layout, submit_button], 'Please upload the correct hyperparameters for the model in a JSON file.', {}, {}
+    # If all checks pass, populate dcc.Store and return the loading layout
+    rep_data = auto_data = {}
+    rep_data['Hyperparams'] = params
+    rep_data['Train Data'] = train_rep.to_dict()
+    rep_data['Test Data'] = test_rep.to_dict()
+    if other_rep_content:
+        rep_data['Other Data'] = other_rep.to_dict()
+    rep_data['Target'] = target_var
+    rep_data['Categorical Var'] = cat_var
+    
+    auto_data['Train Data'] = train_auto.to_dict()
+    auto_data['Test Data'] = test_auto.to_dict()
+    if other_auto_content:
+        auto_data['Other Data'] = other_auto.to_dict()
+    auto_data['Evaluation Metric'] = eval_metric
+    auto_data['Feature Selection'] = auto_feat_selection
+    return loading_layout, '', [json.dumps(rep_data)],  [json.dumps(auto_data)]
 
-# Callback to begin modeling process when submit_button is clicked   
+def parse_data(content, filename):
+    """Helper function to parse data in format of csv/xls/txt into pandas dataframe
+    Args:
+        content (_type_): file content
+        filename (_type_): file name
+    Returns:
+        dat: Dictionary or train/test/other dataframe
+    """
+    content_type, content_string = content.split(',')
+    decoded = base64.b64decode(content_string)
+    if 'json' in filename:
+        dat = json.loads(decoded)
+    elif "csv" in filename:
+        dat = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+    elif "xls" in filename:
+        dat = pd.read_excel(io.BytesIO(decoded))
+    elif "txt" or "tsv" in filename:
+        dat = pd.read_csv(io.StringIO(decoded.decode("utf-8")), delimiter=r"\s+")
+    return dat
+
+# Begin modeling process when submit_button is clicked   
 @app.callback(
-    Output("url", "pathname"), Output("failed-modeling-message", "children"),
+    Output("url", "pathname"), Output("failed-modeling-message", "children"), Output("validator-input-trigger", "data"),
     [Input("loading-spinner", "loading_state"),
      Input("store-project", "data"),
      Input("store-rep-data", "data")],
@@ -298,13 +268,13 @@ def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
                                        rep_train, rep_test, rep_other, target, cat_cols, 
                                        auto_train, auto_test, auto_other, metric, feat_sel)
         except Exception as e:
-            return '/home', f"Model Building has failed. Error: {e}. Please try again. "
+            return '/home', f"Model Building has failed. Error: {e}. Please try again. ", False
 
-        return '/results', ""
+        return '/results', "", True
     
     return current_pathname 
 
-# Callback to periodically update progress text
+# Periodically update progress text
 @app.callback(
     Output("loading-text", "children"), 
     [Input("interval-component", "n_intervals")]
@@ -322,7 +292,7 @@ def update_loading_text(n_intervals):
     loading_text = filtered_contents[-1].split(":")[-1].strip() if filtered_contents else "Preparing..."
     return loading_text
 
-# Callback to change interval timing  based on last loading text
+# Cchange interval timing  based on last loading text
 @app.callback(
     Output("interval-component", "interval"),
     [Input("loading-text", "children")]
@@ -332,3 +302,4 @@ def update_interval(loading_text):
         return 1000
     else:
         return 30000
+

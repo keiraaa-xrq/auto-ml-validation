@@ -41,12 +41,11 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
     DATE = datetime.today().strftime('%Y-%m-%d')
     save_path = f'models/{project_name}_{algorithm}_{DATE}.pkl'
     output_dict = bm_train_data = bm_other_data =  re_train_data = re_other_data = {}
-    
     try:
         log_info(logger, 'Replicating the model...')
         re_train_data, re_other_data = run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, save_path)
     except Exception as e:
-        error_message = "Returning to homepage... An error occured while replicating the model: %s." % str(e)
+        error_message = "Returning to homepage... An error occurred while replicating the model: %s." % str(e)
         log_error(logger, error_message)
         raise e
 
@@ -54,7 +53,7 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
         log_info(logger, 'Creating the benchmark model...')
         bm_train_data, bm_other_data = run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs =-1, mode = 'parallel')
     except Exception as e:
-        error_message = "Returning to homepage... An error occured while creating the benchmark model: %s. " % str(e)
+        error_message = "Returning to homepage... An error occurred while creating the benchmark model: %s. " % str(e)
         log_error(logger, error_message)
         raise e
     
