@@ -30,7 +30,9 @@ def display_page(pathname):
 ########################## Layout ##########################
 app.layout = html.Div([navbar,
                        content,
-                        dcc.Store(id='validator-input-trigger', data=False, storage_type = 'session'), # String to act as a trigger for result page callbacks
+                       # For data sharing between pages
+                       dcc.Store(id='validator-input-trigger', data=False, storage_type = 'session'), # Boolean to act as a trigger for result page callbacks
+                       dcc.Store(id='validator-input-file', data = '', storage_type ='session'), # File name for convenient lookup
                        ])
 
 
