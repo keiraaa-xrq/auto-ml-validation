@@ -211,7 +211,7 @@ def validate_inputs(n_clicks, hyperparams_content, hyperparams_file, algorithm,
         auto_data['Other Data'] = other_auto.to_dict()
     auto_data['Evaluation Metric'] = eval_metric
     auto_data['Feature Selection'] = auto_feat_selection
-    return loading_layout, '', [json.dumps(rep_data)],  [json.dumps(auto_data)]
+    return loading_layout, None, [json.dumps(rep_data)],  [json.dumps(auto_data)]
 
 def parse_data(content, filename):
     """Helper function to parse data in format of csv/xls/txt into pandas dataframe
@@ -270,9 +270,9 @@ def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
         except Exception as e:
             return '/home', f"Model Building has failed. Error: {e}. Please try again. ", False
 
-        return '/results', "", True
+        return '/results', None, True
     
-    return current_pathname 
+    return current_pathname, None, False
 
 # Periodically update progress text
 @app.callback(
