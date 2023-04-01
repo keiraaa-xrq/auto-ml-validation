@@ -36,6 +36,7 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
 
     Returns:
         Dict[str, Dict[str, pd.DataFrame]]: Full dictionary containing raw and processed dataframes and predictions e.g. {data name: {raw/processed :x_df, y: y_df, predict_proba : proba} }
+        str: Output file name produced from model
     """
     # Variables and Logging
     DATE = datetime.today().strftime('%Y-%m-%d')
@@ -64,7 +65,7 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
     with open(f'data/validator_input/{project_name}_{algorithm}_{DATE}_data.pkl', 'wb') as f:
         pickle.dump(output_dict, f)
 
-    return output_dict
+    return output_dict, f'{project_name}_{algorithm}_{DATE}_data.pkl'
     
 
 def run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, save_path):
