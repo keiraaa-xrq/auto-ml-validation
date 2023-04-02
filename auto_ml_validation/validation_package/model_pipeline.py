@@ -36,14 +36,16 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
 
     Returns:
         Dict[str, Dict[str, pd.DataFrame]]: Full dictionary containing raw and processed dataframes and predictions e.g. {data name: {raw/processed :x_df, y: y_df, predict_proba : proba} }
+        str: File name for validator input
     """
     # Variables and Logging
     DATE = datetime.today().strftime('%Y-%m-%d')
-    save_path = f'models/{project_name}_{algorithm}_{DATE}.pkl'
+    rep_save_path = f'models/{project_name}_{algorithm}_rep_{DATE}.pkl'
+    auto_save_path = f'models/{project_name}_auto_{DATE}.pkl'
     output_dict = bm_train_data = bm_other_data =  re_train_data = re_other_data = {}
     try:
         log_info(logger, 'Replicating the model...')
-        re_train_data, re_other_data = run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, save_path)
+        re_train_data, re_other_data = run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, rep_save_path)
     except Exception as e:
         error_message = "Returning to homepage... An error occurred while replicating the model: %s." % str(e)
         log_error(logger, error_message)
@@ -51,7 +53,7 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
 
     try:
         log_info(logger, 'Creating the benchmark model...')
-        bm_train_data, bm_other_data = run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs =-1, mode = 'parallel')
+        bm_train_data, bm_other_data = run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs =-1, mode = 'parallel', save_path = auto_save_path)
     except Exception as e:
         error_message = "Returning to homepage... An error occurred while creating the benchmark model: %s. " % str(e)
         log_error(logger, error_message)
@@ -64,7 +66,7 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
     with open(f'data/validator_input/{project_name}_{algorithm}_{DATE}_data.pkl', 'wb') as f:
         pickle.dump(output_dict, f)
 
-    return output_dict
+    return output_dict, f'{project_name}_{algorithm}_{DATE}_data.pkl'
     
 
 def run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, save_path):
@@ -94,7 +96,7 @@ def run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test
 
     return re_train_data, re_other_data
 
-def run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs, mode):
+def run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs, mode, save_path):
     """Full Cycle of Auto-Benchmarking
     
     Returns:
@@ -109,7 +111,7 @@ def run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, fe
     
     benchmark_model, benchmark_output = auto_benchmark(auto_X_train, auto_y_train, 
                                                     auto_X_val, auto_y_val, metric, feat_sel_bool, 
-                                                    n_jobs=n_jobs, mode=mode, verbose=True)
+                                                    n_jobs=n_jobs, mode=mode, save = True, save_path = save_path, verbose=True)
     
     # To inverse OHE, col_mapping dictionary (k, v) where k is OHE processed column and v is original column
     feats_selected = benchmark_output[benchmark_model.name]['features_selected']

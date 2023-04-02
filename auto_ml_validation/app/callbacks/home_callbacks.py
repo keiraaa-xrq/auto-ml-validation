@@ -1,7 +1,6 @@
 # Landing Page Callbacks
 """
-Bugs Discovered/To Do:
-    - Follow up on bug that is occurring when parse_data/save_data is happening before validating, use dcc.Store to interact the two callbacks
+Home page that includes loading layout
 """
 from auto_ml_validation.app.index import app
 from auto_ml_validation.app.pages.home import *
@@ -33,7 +32,6 @@ home_layout = html.Div([
     dcc.Store(id='store-project', data={}, storage_type='memory'), # Dictionary of Project Config {project name: value, algorithm: value}
     dcc.Store(id='store-rep-data', data = {}, storage_type ='session'), # Dictionary of Replicating Model Data {Hyperparamaters: Value, Train Dataset: Value, Test Dataset: Value, Other Dataset: Value, Target: Value, Categorical Variable: Value}
     dcc.Store(id='store-auto-data', data = {}, storage_type ='session'), # Dictionary of AutoBenchmarking Model Data {Train Dataset: Value, Test Dataset: Value, Other Dataset: Value, Metric: Value, Auto Feat Selection: Yes/No}
-
 ])
 
 # Callback
@@ -235,7 +233,8 @@ def parse_data(content, filename):
 
 # Begin modeling process when submit_button is clicked   
 @app.callback(
-    Output("url", "pathname"), Output("failed-modeling-message", "children"), Output("validator-input-trigger", "data"),
+    Output("url", "pathname"), Output("failed-modeling-message", "children"), 
+    Output("validator-input-trigger", "data"), Output("validator-input-file", "data"),
     [Input("loading-spinner", "loading_state"),
      Input("store-project", "data"),
      Input("store-rep-data", "data")],
@@ -264,15 +263,15 @@ def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
         bool_map = {"yes": True, "no": False}
         feat_sel = bool_map.get(auto_dict['Feature Selection'])
         try:
-            output = model_pipeline.autoML(project_name, algorithm, hyperparams, 
+            output, file_name = model_pipeline.autoML(project_name, algorithm, hyperparams, 
                                        rep_train, rep_test, rep_other, target, cat_cols, 
                                        auto_train, auto_test, auto_other, metric, feat_sel)
         except Exception as e:
-            return '/home', f"Model Building has failed. Error: {e}. Please try again. ", False
+            return '/home', f"Model Building has failed. Error: {e}. Please try again. ", False, None
 
-        return '/results', None, True
+        return '/results', "", True, file_name
     
-    return current_pathname, None, False
+    return current_pathname, False, None
 
 # Periodically update progress text
 @app.callback(
@@ -292,7 +291,7 @@ def update_loading_text(n_intervals):
     loading_text = filtered_contents[-1].split(":")[-1].strip() if filtered_contents else "Preparing..."
     return loading_text
 
-# Cchange interval timing  based on last loading text
+# Change interval timing  based on last loading text
 @app.callback(
     Output("interval-component", "interval"),
     [Input("loading-text", "children")]
