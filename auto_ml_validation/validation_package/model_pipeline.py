@@ -36,7 +36,7 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
 
     Returns:
         Dict[str, Dict[str, pd.DataFrame]]: Full dictionary containing raw and processed dataframes and predictions e.g. {data name: {raw/processed :x_df, y: y_df, predict_proba : proba} }
-        str: File name for validator input
+        str: Output file name produced from model
     """
     # Variables and Logging
     DATE = datetime.today().strftime('%Y-%m-%d')
