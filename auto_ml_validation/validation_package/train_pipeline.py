@@ -6,10 +6,10 @@ import pandas as pd
 import numpy as np
 from .utils.utils import instantiate_clf
 from .algorithms.abstract_binary_classifier import AbstractBinaryClassifier
-from .utils.logger import setup_logger, log_info, log_error
+from .utils.logger import log_info, log_error
 
 
-logger = setup_logger(logging.getLogger(__name__))
+logger = logging.getLogger("main."+__name__)
 
 
 def train(

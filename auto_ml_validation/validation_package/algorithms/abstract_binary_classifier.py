@@ -9,10 +9,9 @@ import numpy as np
 from sklearn import metrics
 from sklearn.model_selection import RandomizedSearchCV
 from ..utils.np_encoder import NpEncoder
-from ..utils.logger import setup_logger
 
 
-logger = setup_logger(logging.getLogger(__name__))
+logger = logging.getLogger("main."+__name__)
 
 
 class AbstractBinaryClassifier(ABC):

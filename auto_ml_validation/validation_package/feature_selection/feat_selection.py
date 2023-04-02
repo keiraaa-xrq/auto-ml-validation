@@ -12,10 +12,8 @@ from typing import *
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
 
-from ..utils.logger import setup_logger
 
-
-logger = setup_logger(logging.getLogger(__name__))
+logger = logging.getLogger("main."+__name__)
 
 
 class AutoFeatureSelector(BaseEstimator):

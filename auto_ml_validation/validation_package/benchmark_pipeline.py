@@ -14,10 +14,10 @@ from .algorithms.xgboost import XGBoostClassifier
 from .algorithms.support_vector_machine import SVClassifier
 from .feature_selection.feat_selection import AutoFeatureSelector
 from .utils.np_encoder import NpEncoder
-from .utils.logger import setup_logger, log_info, log_error
+from .utils.logger import log_info, log_error
 
 
-logger = setup_logger(logging.getLogger(__name__))
+logger = logging.getLogger("main."+__name__)
 
 
 def select_features(
