@@ -12,12 +12,7 @@ def evaluation_pipeline(
     train: Dict[str, Union[pd.DataFrame, np.ndarray]],
     test: Dict[str, Union[pd.DataFrame, np.ndarray]],
     threshold: float,
-    algo: str,
-    params: Dict[str, any],
-    cat_val_name: List[str], 
-    cat_val_value: Dict[str, List[str]],
-    selected_features: List[str],
-    num_of_bins: int = 10
+    selected_features: List[str]
 ):
     """
     Takes in model, data and parameters and generate one dictionary of numerical results and one dictionary for graphical results
@@ -39,28 +34,25 @@ def evaluation_pipeline(
     sme = StatisticalMetricsEvaluator(train, test)
     psi, psi_df = sme.calculate_psi()
     csi_list, csi_dict = sme.csi_for_all_features(selected_features)
-    ks = {k: sme.kstest(k) for k in selected_features}
+    ks = sme.kstest()
+    feature_gini = sme.cal_feature_gini()
+    dataset_gini = sme.cal_normalized_gini()
     print("Statistical metrics evaluation done!")
-
-    # fairness
-
 
     # transparency
     print("Evaluating transparency metrics...")
-    tme = TransparencyMetricsEvaluator(model, train['processed_X'].iloc[0:2500, :], train['y'].iloc[0:2500, :])  # for testing
+    tme = TransparencyMetricsEvaluator(model, train['processed_X'].iloc[0:250, :])  # for testing
     local_lime_fig, global_lime_fig, local_lime_lst, global_lime_map = tme.lime_interpretability()
     local_shap_fig, global_shap_fig, local_impt_map, global_impt_map = tme.shap_interpretability()
-    gini = tme.cal_gini()
+
     print("Transparency metrics evaluation done!")
 
     return {
             "dist": dist, "lift": lift, "pr": pr, "roc": roc, "confusion": confusion,
             "local_lime": local_lime_fig, "global_lime": global_lime_fig, "local_shap": local_shap_fig, "global_shap": global_shap_fig, 
         }, {
-            "metrics": metrics, "gini": gini, "auc": auc, 
+            "metrics": metrics, "feature_gini": feature_gini, "auc": auc, "dataset_gini": dataset_gini, 
             "local_lime": local_lime_lst, "global_lime": global_lime_map, "local_shap": local_impt_map, "global_shap": global_impt_map,
             "psi": psi, "psi_df": psi_df, 
             "csi_list": csi_list, "csi_dict": csi_dict, "ks": ks
         }
-
-

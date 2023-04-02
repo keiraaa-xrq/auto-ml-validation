@@ -51,7 +51,7 @@ class PerformanceEvaluator:
         }
 
     def get_roc_curve(self):
-        fpr, tpr, thresholds = skl.roc_curve(self.y_true, self.positive_proba)
+        fpr, tpr, thres = skl.roc_curve(self.y_true, self.positive_proba)
         fig = px.area(
             x=fpr, y=tpr,
             title='ROC Curve',
@@ -80,7 +80,7 @@ class PerformanceEvaluator:
             "ROCAUC": skl.roc_auc_score(self.y_true, self.positive_proba),
             "PRAUC": skl.auc(recall, precision)
         }
-
+    
     def get_lift_chart(self):
         return skp.metrics.plot_lift_curve(self.y_true, self.proba)
 
