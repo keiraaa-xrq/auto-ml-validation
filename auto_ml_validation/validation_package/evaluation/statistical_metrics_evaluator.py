@@ -3,7 +3,7 @@ import math
 import pandas as pd
 import numpy as np
 import scipy
-from ..utils.utils import check_columns
+from sklearn.metrics import roc_auc_score
 
 
 class StatisticalMetricsEvaluator:
@@ -30,10 +30,8 @@ class StatisticalMetricsEvaluator:
         """
         Calculate the value and generate output df for psi and csi.
         """
-        # print(train_values)
         train_count = train_values.groupby(
             pd.cut(train_values, bin_list)).count()
-        # print(train_count)
         train_perc = train_count.apply(
             lambda x: x / sum(train_count))
         test_count = test_values.groupby(
@@ -68,7 +66,6 @@ class StatisticalMetricsEvaluator:
     def calculate_psi(self, num_bins=10) -> float:
         train_proba = pd.Series(self.train_proba)
         test_proba = pd.Series(self.test_proba)
-        # print(train_proba)
         bin_list = np.arange(0, 1+1/num_bins, 1/num_bins).tolist()
         psi, output_df = self._generate_output(
             bin_list,
@@ -106,6 +103,25 @@ class StatisticalMetricsEvaluator:
             df_list.append(df)
         return df_list, csi_dict
 
-    def kstest(self) -> float:
-        return scipy.stats.ks_2samp(self.train_proba, 
-                                    self.test_proba)
+    def kstest(self) -> Dict[str, float]:
+        train_pos = []
+        train_neg = []
+        for i in range(0, len(self.train_y)):
+            if self.train_y[i] == 0:
+                train_neg.append(self.train_proba[i])
+            else: 
+                train_pos.append(self.train_proba[i])
+
+        test_pos = []
+        test_neg = []
+        for i in range(0, len(self.test_y)):
+            if self.test_y[i] == 0:
+                test_neg.append(self.train_proba[i])
+            else: 
+                test_pos.append(self.train_proba[i])
+        
+        output_dict = {'Train' : scipy.stats.ks_2samp(train_pos, test_pos).statistic,
+                       'Test' :  scipy.stats.ks_2samp(test_pos, test_neg).statistic,
+                       'Train vs Test' : scipy.stats.ks_2samp(self.train_proba, 
+                                                       self.test_proba).statistic}
+        return output_dict

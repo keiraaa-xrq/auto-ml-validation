@@ -3,8 +3,7 @@ from dash import html, dcc, dash_table
 import pandas as pd
 import numpy as np
 from auto_ml_validation.validation_package.evaluation import statistical_metrics_evaluator
-
-
+import pickle
 
 ############## start of codes used to load dummy data, remove later #######################
 train_prob = pd.read_csv('././data/stage_2/loanstats_train_proba.csv')
@@ -52,6 +51,13 @@ test_data['pred_proba'] = np.transpose(np.array([1-test_prob['probability'], tes
 # print(test_data['pred_proba'])
 # print(test_data['pred_proba'][:, 1])
 ############## end of codes used to load dummy data, remove later #######################
+
+with open('././data/validator_input/featselection_rf_2023-03-28_data.pkl', 'rb') as handle:
+    data = pickle.load(handle)
+# print(data)
+
+train_data = data['bm_train_data']
+test_data = data['bm_other_data']['Test']
 
 def statistical_model_metrics_layout(train_data: pd.DataFrame,
                test_data: pd.DataFrame,
