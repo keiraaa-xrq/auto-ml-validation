@@ -125,3 +125,39 @@ class StatisticalMetricsEvaluator:
                        'Train vs Test' : scipy.stats.ks_2samp(self.train_proba, 
                                                        self.test_proba).statistic}
         return output_dict
+    
+
+    def cal_normalized_gini(self):
+        """Simple normalized Gini based on Scikit-Learn's roc_auc_score""" 
+        gini = lambda a, p: 2 * roc_auc_score(a, p) - 1
+        return gini(self.test_y, self.test_proba) / gini(self.test_y, self.test_y)
+
+    
+    def cal_feature_gini(self):
+        """Calculate GINI index for attributes"""  
+        X = self.train_raw_X.iloc[0:100,:] # for testing
+        y = self.train_y[0:100] # for testing
+
+        def _gini_impurity (value_counts):
+            n = value_counts.sum()
+            p_sum = 0
+            for key in value_counts.keys():
+                p_sum = p_sum  +  (value_counts[key] / n ) * (value_counts[key] / n ) 
+            gini = 1 - p_sum
+            return gini
+        
+        def _gini_attribute(attribute_name):
+            attribute_values = X[attribute_name].value_counts()
+            gini_A = 0 
+            for key in attribute_values.keys():
+                df_k = pd.DataFrame(y)[X[attribute_name] == key].value_counts()
+                n_k = attribute_values[key]
+                n = X.shape[0]
+                gini_A = gini_A + (( n_k / n) * _gini_impurity(df_k))
+            return gini_A
+        
+        result = {}
+        for key in (X).columns:
+            result[key] = _gini_attribute(key)
+        
+        return result

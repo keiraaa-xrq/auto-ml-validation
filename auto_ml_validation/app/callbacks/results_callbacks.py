@@ -76,6 +76,7 @@ results_layout = html.Div(children=[
                             10)
     ])
 
+
 @app.callback(Output('output-div', 'children'),
               [Input('validator-input-trigger', 'data'),
                Input('validator-input-file','data')]

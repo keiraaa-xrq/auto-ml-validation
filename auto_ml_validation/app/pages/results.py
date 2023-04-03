@@ -66,20 +66,12 @@ def statistical_model_metrics_layout(train_data: pd.DataFrame,
     my_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(train_data, 
                                                                          test_data)
     psi_score, psi_df = my_class.calculate_psi(number_of_bins)
-    # print(psi_df)
-    # reset index as columns for display
     psi_df.columns = psi_df.columns.astype(str)
     psi_df = psi_df.reset_index()
     psi_df['index'] = psi_df['index'].astype(str)
     psi_df.rename(columns = {'index':'ranges'}, inplace = True)
-    # print(psi_df)
-    ks_score = my_class.kstest()
+    ks_dict = my_class.kstest()
 
-    if ks_score.pvalue <= 0.05:
-        ks_string = str(ks_score.pvalue) + '. ' + ' Null hypothese (Training and Testing Set are from the same statistical distribution) is rejected.'
-    else:
-        ks_string = str(ks_score.pvalue) + '. ' + ' Null hypothese (Training and Testing Set are from the same statistical distribution) cannot be rejected.'
-        
     return html.Div(
         style={'backgroundColor':'#fee6c8', 'width': '95%', 'margin': 'auto'}, children = [
         html.Div([html.H3('Probability Stability Index Table', style={'textAlign': 'center', 'fontWeight': 'bold'}),
@@ -103,7 +95,9 @@ def statistical_model_metrics_layout(train_data: pd.DataFrame,
                              sort_action='native',
                          ),
         html.Br(),
-        html.H6('P-value of KS Test: ' + ks_string, style={'textAlign': 'left', 'fontWeight': 'bold'}),
+        html.H6('KS Test Train: ' + str(ks_dict['Train']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
+        html.H6('KS Test Test: ' + str(ks_dict['Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
+        html.H6('KS Test Train&Test: ' + str(ks_dict['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
         html.Br(),
     ]
     )
