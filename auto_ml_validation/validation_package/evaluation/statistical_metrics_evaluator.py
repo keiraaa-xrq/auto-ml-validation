@@ -135,8 +135,27 @@ class StatisticalMetricsEvaluator:
     
     def cal_feature_gini(self):
         """Calculate GINI index for attributes"""  
-        X = self.train_raw_X
-        y = self.train_y
+
+        pop_X = self.train_raw_X
+        pop_y = self.train_y
+
+        # Get the indices of the samples belonging to each class
+        class_0_indices = np.where(pop_y == 0)[0]
+        class_1_indices = np.where(pop_y == 1)[0]
+
+        # Set the number of samples to be randomly sampled as 1/100 of overall population
+        num_samples_per_class = int(pop_X.shape[0]/100)
+
+        # Randomly sample the indices from each class
+        class_0_sampled_indices = np.random.choice(class_0_indices, size=num_samples_per_class, replace=False)
+        class_1_sampled_indices = np.random.choice(class_1_indices, size=num_samples_per_class, replace=False)
+
+        # Concatenate the sampled indices and sort them to preserve the order of the original data
+        sampled_indices = np.sort(np.concatenate([class_0_sampled_indices, class_1_sampled_indices]))
+
+        # Select the corresponding samples from X and y
+        X = pop_X.iloc[sampled_indices,:]
+        y = pop_y[sampled_indices]
 
         def _gini_impurity (value_counts):
             n = value_counts.sum()
