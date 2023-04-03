@@ -3,7 +3,10 @@ from dash import html, dcc, dash_table
 import pandas as pd
 import numpy as np
 from auto_ml_validation.validation_package.evaluation import statistical_metrics_evaluator
+from auto_ml_validation.validation_package.evaluation import transparency_metrics_evaluator
 import pickle
+from sklearn.linear_model import LogisticRegression
+from auto_ml_validation.app.index import app
 
 ############## start of codes used to load dummy data, remove later #######################
 train_prob = pd.read_csv('././data/stage_2/loanstats_train_proba.csv')
@@ -52,12 +55,18 @@ test_data['pred_proba'] = np.transpose(np.array([1-test_prob['probability'], tes
 # print(test_data['pred_proba'][:, 1])
 ############## end of codes used to load dummy data, remove later #######################
 
-with open('././data/validator_input/featselection_rf_2023-03-28_data.pkl', 'rb') as handle:
-    data = pickle.load(handle)
+with open('././data/validator_input/featselection_rf_2023-03-28_data.pkl', 'rb') as f:
+    data = pickle.load(f)
 # print(data)
 
 train_data = data['bm_train_data']
 test_data = data['bm_other_data']['Test']
+
+# X = train_data['processed_X'].iloc[0:2500]
+# y = train_data['y'].iloc[0:2500]
+
+# lr = LogisticRegression().fit(X, y)
+# pickle.dump(lr, open('././models/lr.pkl', 'wb'))
 
 def statistical_model_metrics_layout(train_data: pd.DataFrame,
                test_data: pd.DataFrame,
@@ -101,6 +110,7 @@ def statistical_model_metrics_layout(train_data: pd.DataFrame,
         html.Br(),
     ]
     )
+
 # define ling-running task
 def gini_layout(train_data: pd.DataFrame,
                 test_data: pd.DataFrame, 
@@ -172,6 +182,36 @@ def csi_table_layout(train_data: pd.DataFrame,
         html.Br(),
         html.Br()        
     ]) 
+
+def trans_layout(train_data:pd.DataFrame,
+                 model_path: str)->html.Div:
+
+    with open(model_path, 'rb') as f:
+        model = pickle.load(f)
+
+    # print(train_data['processed_X'])
+
+    evaluator = transparency_metrics_evaluator.TransparencyMetricsEvaluator(model, train_data['processed_X'])
+
+    local_lime_fig, global_lime_fig, local_text_lime, global_text_lime = evaluator.lime_interpretability()
+    # print(type(global_lime_fig))
+    # global_lime_fig.savefig('././app/assets/images/global_lime.png', bbox_inches='tight')
+    # local_lime_fig.savefig('././app/assets/images/local_lime.png', bbox_inches='tight')
+
+    local_shap_fig, global_shap_fig, local_text_shap, global_text_shap = evaluator.shap_interpretability()
+    local_shap_fig.savefig('././auto_ml_validation/app/assets/images/local_shap.png',  bbox_inches='tight')
+    global_shap_fig.savefig('././auto_ml_validation/app/assets/images/global_shap.png', bbox_inches='tight')
+
+    # return html.Img(src='././app/assets/images/local_shap.jpeg')
+    return html.Div([
+        html.Img(src=app.get_asset_url("images/local_shap.png")),
+        html.Img(src=app.get_asset_url("images/global_shap.png"))])
+
+#html.Div( 
+        #style={'backgroundColor': '#fee6c8', 'width': '95%', 'margin': 'auto'}, children=[
+        #html.Br(),
+       
+    #]) 
 
 
 

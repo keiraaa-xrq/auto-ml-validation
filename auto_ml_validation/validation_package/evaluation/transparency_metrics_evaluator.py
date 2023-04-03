@@ -27,7 +27,7 @@ class TransparencyMetricsEvaluator:
             class_name_list (list, optional): A list of class names. Defaults to None.
         """
         self.model = model
-        self.X = X
+        self.X = X.iloc[0:250]
         self.class_name_list = class_name_list
         
         # Initialize the LIME explainer

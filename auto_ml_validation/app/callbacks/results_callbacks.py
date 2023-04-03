@@ -93,9 +93,11 @@ results_layout = html.Div(children=[
     gini_layout(train_data, test_data,[]),
     csi_table_layout(train_data, test_data, 
                            [],
-                            10)
+                            10),
+    html.Br(),
+    html.Br(),
+    trans_layout(train_data, '././models/lr.pkl'),                     
     ])
-
 
 @app.callback(Output('output-div', 'children'),
               [Input('validator-input-trigger', 'data'),
