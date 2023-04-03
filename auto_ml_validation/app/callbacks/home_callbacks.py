@@ -9,6 +9,7 @@ from auto_ml_validation.validation_package.utils.utils import instantiate_clf
 
 import pandas as pd
 import io
+import os
 import base64
 import json
 from datetime import datetime
@@ -276,22 +277,28 @@ def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
 # Periodically update progress text
 @app.callback(
     Output("loading-text", "children"), 
-    [Input("interval-component", "n_intervals")]
+    [Input("interval-component", "n_intervals"),
+    Input("store-project", "data")],
 )
-def update_loading_text(n_intervals):
+def update_loading_text(n_intervals, project_data):
+    project_dict = json.loads(project_data)
+    project_name = project_dict['Project Name']
     date = datetime.today().strftime('%Y-%m-%d')
-    with open(f"logs/{date}.log", "r") as f:
+    file_path = f"logs/{date}_{project_name}.log"
+    if not os.path.exists(file_path):
+        return "Preparing..."
+    with open(file_path, "r") as f:
         logger_contents = f.read()
 
     filtered_contents = []
     for line in logger_contents.strip().split("\n"):
-        if "auto_ml_validation.validation_package.model_pipeline" in line:
+        if "main - INFO -" in line:
             filtered_contents.append(line)
 
-    loading_text = filtered_contents[-1].split(":")[-1].strip() if filtered_contents else "Preparing..."
+    loading_text = filtered_contents[-1].split("-")[-1].strip() if filtered_contents else "Preparing..."
     return loading_text
 
-# Change interval timing  based on last loading text
+# Change interval timing based on last loading text
 @app.callback(
     Output("interval-component", "interval"),
     [Input("loading-text", "children")]
