@@ -10,7 +10,8 @@ navbar = header.NavBar(app)
 
 
 ########################## Body ##########################
-content = html.Div(id='page-content', children=[home_callbacks.home_layout])
+content = html.Div(id='page-content', children=[home_callbacks.home_layout], 
+                   )
 
 ########################## Callback ##########################
 # Callback to show home page when the app is loaded
@@ -27,9 +28,11 @@ def display_page(pathname):
 
 
 ########################## Layout ##########################
-app.layout = html.Div([dcc.Location(id='url', refresh=False, pathname='/results'),
-                       navbar,
-                       content
+app.layout = html.Div([navbar,
+                       content,
+                       # For data sharing between pages
+                       dcc.Store(id='validator-input-trigger', data=False, storage_type = 'session'), # Boolean to act as a trigger for result page callbacks
+                       dcc.Store(id='validator-input-file', data = '', storage_type ='session'), # File name for convenient lookup
                        ])
 
 

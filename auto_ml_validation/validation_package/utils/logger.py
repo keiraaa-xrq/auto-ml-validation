@@ -6,6 +6,7 @@ def setup_logger(logger: logging.Logger, filepath: str = None) -> logging.Logger
     """
     Configure Logger.
     """
+    
     if filepath is None:
         date = datetime.today().strftime('%Y-%m-%d')
         filepath = f'./logs/{date}.log'
@@ -23,3 +24,8 @@ def setup_logger(logger: logging.Logger, filepath: str = None) -> logging.Logger
 def log_info(logger: logging.Logger, msg: str):
     print(msg)
     logger.info(msg)
+
+        
+def log_error(logger: logging.Logger, msg: str):
+    print(msg)
+    logger.error(msg)

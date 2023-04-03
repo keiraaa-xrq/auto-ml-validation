@@ -14,7 +14,7 @@ from .algorithms.xgboost import XGBoostClassifier
 from .algorithms.support_vector_machine import SVClassifier
 from .feature_selection.feat_selection import AutoFeatureSelector
 from .utils.np_encoder import NpEncoder
-from .utils.logger import setup_logger, log_info
+from .utils.logger import setup_logger, log_info, log_error
 
 
 logger = setup_logger(logging.getLogger(__name__))
@@ -94,7 +94,7 @@ def instantiate_clfs(n_sample: int) -> List[AbstractBinaryClassifier]:
     xgb = XGBoostClassifier()
     svc = SVClassifier()
     if n_sample < 10000:
-        clfs = [dt, knn, lg, rf, xgb, svc]
+        clfs = [dt]#[dt, knn, lg, rf, xgb, svc]
     elif n_sample < 15000:
         clfs = [dt, knn, lg, rf, xgb]
     else:
@@ -145,6 +145,8 @@ def auto_benchmark(
     feature_selection: bool,
     n_jobs: int = -1,
     mode: str = 'parallel',
+    save: bool = False,
+    save_path: Optional[str] = '',
     verbose: bool = True,
 ) -> Tuple[str, Dict]:
     """
@@ -177,6 +179,8 @@ def auto_benchmark(
             results.append(result)
     best_clf, output = compare_performance(
         results, metric, verbose=verbose)
+    if save:
+        best_clf.save_model(save_path)
     return best_clf, output
 
 
@@ -199,4 +203,5 @@ def save_benchmark_output(output: Dict, models_dir: str, result_path: str):
             json.dump(results_dict, fp, cls=NpEncoder)
     except Exception as e:
         print('Error:', e)
+        log_error(logger, 'Saving model failed: ' + e)
         print(results_dict)

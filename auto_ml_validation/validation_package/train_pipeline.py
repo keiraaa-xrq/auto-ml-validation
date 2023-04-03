@@ -1,13 +1,12 @@
 """Replicate model training
 """
-
 from typing import *
 import logging
 import pandas as pd
 import numpy as np
 from .utils.utils import instantiate_clf
 from .algorithms.abstract_binary_classifier import AbstractBinaryClassifier
-from .utils.logger import setup_logger, log_info
+from .utils.logger import setup_logger, log_info, log_error
 
 
 logger = setup_logger(logging.getLogger(__name__))
@@ -30,9 +29,15 @@ def train(
     optimise the prediction threshold.
     '''
     # prepare
-    clf = instantiate_clf(algo, params)
+    try:
+        clf = instantiate_clf(algo, params)
+    except Exception as e:
+        log_error(logger, f'Unable to instantiate {algo} model with {params}.')
     # train
-    clf.fit(X_train, y_train)
+    try:
+        clf.fit(X_train, y_train)
+    except Exception as e:
+        log_error(logger, f'Unable to instantiate {algo} model with {params}.')
     # optimise threshold
     best_threshold, max_score = clf.optimise_threshold(
         X_val, y_val, metric, verbose=0)

@@ -39,7 +39,8 @@ def project_field():
             )
         ]),
         html.Br(),
-        html.Div(id="validation-message", style={"color": "red", 'textAlign': 'center'})
+        html.Div(id="validation-message", style={"color": "red", 'textAlign': 'center'}),
+        html.Div(id="failed-modeling-message", style={"color": "red", 'textAlign': 'center'})
         ]
 
     form = dbc.Form(form_fields, id="form")
@@ -58,7 +59,18 @@ def rep_dataset_layout() -> html.Div:
     Returns:
         html.Div: html element consisting of form input for user
     """
-
+    # Create the checklist dropdown
+    cat_var_dropdown = dbc.DropdownMenu(
+        label="Select Options",
+        children=[
+            dbc.Checklist(
+                options=[],
+                value=[],
+                id="cat-var-input",
+                inline=True,
+            ),
+        ],
+    )
     return html.Div([
         # New Heading
         html.Div([
@@ -150,9 +162,10 @@ def rep_dataset_layout() -> html.Div:
             html.P('Please indicate the target variable name:'),
             dcc.Dropdown(id='target-var-input', value='', options = [], style={'width': '100%'}),
             html.P('Please indicate all categorical variables:'),
-            dcc.Dropdown(id='cat-var-input', value='', options = [], multi=True, style={'width': '100%'})
-            ], style={'textAlign': 'center', 'margin': 'auto', 'maxWidth': '800px', 'paddingTop': '50px'})
-            ],
+            cat_var_dropdown
+            ], style={'textAlign': 'center', 'margin': 'auto', 'maxWidth': '800px', 'paddingTop': '50px'}),
+            dcc.Textarea(id='selected-options', value='', readOnly=True, style={'margin-top': '20px', 'width': '78%', 'height': '80%'})
+            ], 
         style=container_style
         )
   
@@ -178,7 +191,7 @@ def auto_dataset_layout() -> html.Div:
                         {'label': 'Precision', 'value': 'precision'},
                         {'label': 'Accuracy', 'value': 'accuracy'},
                         {'label': 'Recall', 'value': 'recall'},
-                        {'label': 'AUC-ROC', 'value': 'aucroc'} # Check if this is correct value
+                        {'label': 'AUC-ROC', 'value': 'roc_auc'}
                     ],
                     value='f1'
                 ),
@@ -241,19 +254,33 @@ def auto_dataset_layout() -> html.Div:
     
 def loading_div_layout(app) -> html.Div:
     return html.Div(
-        dcc.Loading(
-        id="loading-spinner",
-        children=[
-            html.Div(
-                className="loader",
-                children=[
-                html.Img(src=app.get_asset_url("images/ball_loading.gif"), alt="loading..."),
-                html.H3(id="loading-text", className="loader-text", style={'textAlign': 'center', 'fontWeight': 'bold'}, children = "Preparing...")
-                ]
-            )
-        ],
-        type="circle",
-        loading_state={'is_loading': True}
-        ), 
-        style = {'display':'flex','alignItems':'center','justifyContent': 'center', 'gap': '10px'}
+            [
+                dcc.Loading(
+                    id="loading-spinner",
+                    children=[
+                        html.Div(
+                            className="loader",
+                            children=[
+                                html.Img(
+                                    src=app.get_asset_url("images/ball_loading.gif"),
+                                    alt="loading...",
+                                ),
+                                html.H3(
+                                    id="loading-text",
+                                    className="loader-text",
+                                    style={
+                                        "textAlign": "center",
+                                        "fontWeight": "bold",
+                                    },
+                                    children="Preparing...",
+                                ),
+                            ],
+                        )
+                    ],
+                    type="circle",
+                    loading_state={"is_loading": True},
+                ),
+                dcc.Interval(id="interval-component", interval=5000, n_intervals=0),
+            ],
+            style={"display": "flex", "alignItems": "center", "justifyContent": "center", "gap": "10px"},
         )

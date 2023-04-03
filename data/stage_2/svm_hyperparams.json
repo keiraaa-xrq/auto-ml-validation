@@ -1,5 +1,8 @@
 {
+    "C": "1.0",
     "kernel": "rbf",
-    "C": 1.0,
-    "gamma": "scale"
+    "degree": "3",
+    "gamma": "scale",
+    "coef0": "0.0",
+    "probability": "true",
 }
