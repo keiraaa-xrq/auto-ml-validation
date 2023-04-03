@@ -135,8 +135,8 @@ class StatisticalMetricsEvaluator:
     
     def cal_feature_gini(self):
         """Calculate GINI index for attributes"""  
-        X = self.train_raw_X.iloc[0:100,:] # for testing
-        y = self.train_y[0:100] # for testing
+        X = self.train_raw_X
+        y = self.train_y
 
         def _gini_impurity (value_counts):
             n = value_counts.sum()

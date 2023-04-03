@@ -101,39 +101,51 @@ def statistical_model_metrics_layout(train_data: pd.DataFrame,
         html.Br(),
     ]
     )
-
-
-def feature_metrics_layout(train_data: pd.DataFrame,
-                           test_data: pd.DataFrame, 
-                           ft_name_list: list[str], 
-                           number_of_bins: int)->html.Div:
-    
-    stats_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(train_data, 
-                                                                            test_data)
-    
-    csi_df, csi_dict = stats_class.csi_for_all_features(ft_name_list, number_of_bins)
-
-    csi_children = []
-
-    for df, ft_name in zip(csi_df, ft_name_list):
-        df.columns = df.columns.astype(str)
-        df = df.reset_index()
-        df['index'] = df['index'].astype(str)
-        df.rename(columns = {'index':'ranges'}, inplace = True)
-        csi_children.append(html.Br())
-        csi_children.append(html.Br())
-        csi_children.append(html.H5(ft_name + ' CSI Score:    ' + str(csi_dict[ft_name]),
-                                    style={'textAlign': 'center', 'fontWeight': 'bold'}))
-        csi_children.append(dash_table.DataTable(id=ft_name+"-csi-table",
-                                                 data= df.to_dict('records'), 
-                                                 columns=[{"name": i, "id": i} for i in df.columns], 
-                                                 sort_action='native'))
-        
+# define ling-running task
+def gini_layout(train_data: pd.DataFrame,
+                test_data: pd.DataFrame, 
+                ft_name_list: list[str])-> html.Div:
     
     return html.Div( 
         style={'backgroundColor': '#d7d7d7', 'width': '95%', 'margin': 'auto'}, children=[
         html.Br(),
         html.H3('Feature Metrics', style={'textAlign': 'left', 'fontWeight': 'bold'}),
+        html.Label('Please choose the feature to be displayed: '),
+        dcc.Dropdown(id="gini-feature-multi-dynamic-dropdown", 
+                     multi=True,
+                     options= dict(zip(train_data['raw_X'].columns.to_list(), 
+                                       train_data['raw_X'].columns.to_list())),
+                     value= [],
+                     style={'width': '50%', 'margin': 'left'}), 
+        html.Br(),
+        html.Br(),
+        html.H4('GINI Index: ', style={'textAlign': 'left', 'fontWeight': 'bold'}),
+        # html.Div([
+        #             html.H4('Characteristic Stability Index Table', style={'textAlign': 'center', 'fontWeight': 'bold'})
+        # ], style={'width': '100%', 'top': 0, 'left': 0, 'margin': 0}),
+        dcc.Loading(id="loading-gini",
+                    type="circle",
+                    children=html.Div([
+                            # Output of long-running task
+                            html.Div(id="gini_viz"),
+                    ]),
+                    ),
+        html.Br(),
+        html.Br()        
+    ]) 
+
+
+
+
+def csi_table_layout(train_data: pd.DataFrame,
+                           test_data: pd.DataFrame, 
+                           ft_name_list: list[str], 
+                           number_of_bins: int)->html.Div:
+    
+    return html.Div( 
+        style={'backgroundColor': '#d7d7d7', 'width': '95%', 'margin': 'auto'}, children=[
+        html.Br(),
+        # html.H3('Feature Metrics', style={'textAlign': 'left', 'fontWeight': 'bold'}),
         html.Label('Please choose the feature to be displayed: '),
         dcc.Dropdown(id="csi-feature-multi-dynamic-dropdown", 
                      multi=True,
@@ -152,11 +164,11 @@ def feature_metrics_layout(train_data: pd.DataFrame,
                   pattern=r'\d*'),
         html.Br(),
         html.Br(),
-        html.H4('GINI Index: ' + str(0.71), style={'textAlign': 'left', 'fontWeight': 'bold'}),
+        # html.H4('GINI Index: ', style={'textAlign': 'left', 'fontWeight': 'bold'}),
         html.Div([
                     html.H4('Characteristic Stability Index Table', style={'textAlign': 'center', 'fontWeight': 'bold'})
         ], style={'width': '100%', 'top': 0, 'left': 0, 'margin': 0}),
-        html.Div(id="feature_related_viz", children = csi_children),
+        html.Div(id="feature_related_viz", children = []),
         html.Br(),
         html.Br()        
     ]) 

@@ -33,7 +33,24 @@ def update_psi_score(num_of_bins):
         psi_score, psi_df = my_class.calculate_psi(num_of_bins)
 
         return 'PSI Score: '+ str(psi_score)
-               
+
+@app.callback(
+    Output("gini_viz", "children"),
+    Input("gini-feature-multi-dynamic-dropdown", "value"), 
+)            
+def update_gini(ft_name_list: list[str]):
+    stats_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(train_data, 
+                                                                                test_data)
+    gini = stats_class.cal_feature_gini()
+    
+    gini_children = []
+    
+    for ft_name in ft_name_list:
+              gini_children.append(html.H5(ft_name + ' GINI Index: ' + str(gini[ft_name])))
+
+    return html.Div(id="gini-viz", children = gini_children)
+
+
 # Update the CSI when user select features
 # options = train_data['raw_X'].columns.to_list()
 @app.callback(
@@ -41,12 +58,14 @@ def update_psi_score(num_of_bins):
     Input("csi-feature-multi-dynamic-dropdown", "value"),
     Input("csi-num-of-bins", "value")
 )
-def update_feature_related_metrcis(feature_list, num_of_bins):
+def update_csi_metrcis(feature_list, num_of_bins):
         stats_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(train_data, 
                                                                                 test_data)
+        
         csi_df, csi_dict = stats_class.csi_for_all_features(feature_list, num_of_bins)
 
         csi_children = []
+        
         for df, ft_name in zip(csi_df, feature_list):
                 df.columns = df.columns.astype(str)
                 df = df.reset_index()
@@ -71,7 +90,8 @@ results_layout = html.Div(children=[
     statistical_model_metrics_layout(train_data, test_data, 10),
     html.Br(),
     html.Br(),
-    feature_metrics_layout(train_data, test_data, 
+    gini_layout(train_data, test_data,[]),
+    csi_table_layout(train_data, test_data, 
                            [],
                             10)
     ])
