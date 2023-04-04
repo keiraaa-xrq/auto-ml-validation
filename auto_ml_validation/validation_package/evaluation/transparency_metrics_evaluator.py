@@ -26,20 +26,24 @@ class TransparencyMetricsEvaluator:
             X (pandas.DataFrame): The input data for the machine learning model.
             class_name_list (list, optional): A list of class names. Defaults to None.
         """
+        sample_X = X.sample(n=int(X.shape[0]/100))
+
         self.model = model
-        self.X = X.iloc[:2500]
+        self.X = sample_X
         self.class_name_list = class_name_list
+
+
         
         # Initialize the LIME explainer
         self.lime_explainer = LimeTabularExplainer(
-            X.values,
-            feature_names=X.columns,
+            sample_X.values,
+            feature_names=sample_X.columns,
             discretize_continuous=False,
             class_names=[class_name_list] if class_name_list is not None else None
         )
         
         # Initialize the SHAP explainer
-        self.shap_explainer = shap.Explainer(model.predict, X)
+        self.shap_explainer = shap.Explainer(model.predict, sample_X)
     
     def lime_interpretability(self):
         """

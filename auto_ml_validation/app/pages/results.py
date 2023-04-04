@@ -204,10 +204,15 @@ def trans_layout(train_data:pd.DataFrame,
     global_shap_fig.savefig('././auto_ml_validation/app/assets/images/global_shap.png', bbox_inches='tight')
 
     # return html.Img(src='././app/assets/images/local_shap.jpeg')
-    return html.Div([
+    return html.Div(
+        style={'backgroundColor': '#d7d7d7', 'width': '95%', 'margin': 'auto'}, children=[
+        html.H4('Local Lime Plot', style={'textAlign': 'center', 'fontWeight': 'bold'}),
         html.Img(src=app.get_asset_url("images/local_lime.png")),
+        html.H4('Global Lime Plot', style={'textAlign': 'center', 'fontWeight': 'bold'}),
         html.Img(src=app.get_asset_url("images/global_lime.png")),
+        html.H4('Local Shap Plot', style={'textAlign': 'center', 'fontWeight': 'bold'}),
         html.Img(src=app.get_asset_url("images/local_shap.png")),
+        html.H4('Global Shap Plot', style={'textAlign': 'center', 'fontWeight': 'bold'}),
         html.Img(src=app.get_asset_url("images/global_shap.png")),
         ])
 
