@@ -7,15 +7,6 @@ from lime.lime_tabular import LimeTabularExplainer
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 
-import numpy as np
-import matplotlib.pyplot as plt
-import shap
-import lime
-from lime import submodular_pick
-from lime.lime_tabular import LimeTabularExplainer
-import pandas as pd
-from sklearn.linear_model import LogisticRegression
-
 class TransparencyMetricsEvaluator:
     def __init__(self, model, X, class_name_list=None):
         """
