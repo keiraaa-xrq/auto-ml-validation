@@ -7,6 +7,7 @@ from auto_ml_validation.validation_package.evaluation import transparency_metric
 import pickle
 from sklearn.linear_model import LogisticRegression
 from auto_ml_validation.app.index import app
+import matplotlib.pyplot as plt
 
 ############## start of codes used to load dummy data, remove later #######################
 train_prob = pd.read_csv('././data/stage_2/loanstats_train_proba.csv')
@@ -62,10 +63,11 @@ with open('././data/validator_input/featselection_rf_2023-03-28_data.pkl', 'rb')
 train_data = data['bm_train_data']
 test_data = data['bm_other_data']['Test']
 
-# X = train_data['processed_X'].iloc[0:2500]
-# y = train_data['y'].iloc[0:2500]
+#X = train_data['processed_X'].iloc[0:2500]
+#.to_csv('././data/stage_2/processed_X_for_trans.csv')
+#y = train_data['y'].iloc[0:2500]
 
-# lr = LogisticRegression().fit(X, y)
+# lr = LogisticRegression(max_iter=1000).fit(X, y)
 # pickle.dump(lr, open('././models/lr.pkl', 'wb'))
 
 def statistical_model_metrics_layout(train_data: pd.DataFrame,
@@ -194,9 +196,8 @@ def trans_layout(train_data:pd.DataFrame,
     evaluator = transparency_metrics_evaluator.TransparencyMetricsEvaluator(model, train_data['processed_X'])
 
     local_lime_fig, global_lime_fig, local_text_lime, global_text_lime = evaluator.lime_interpretability()
-    # print(type(global_lime_fig))
-    # global_lime_fig.savefig('././app/assets/images/global_lime.png', bbox_inches='tight')
-    # local_lime_fig.savefig('././app/assets/images/local_lime.png', bbox_inches='tight')
+    global_lime_fig.savefig('././auto_ml_validation/app/assets/images/global_lime.png', bbox_inches='tight')
+    local_lime_fig.savefig('././auto_ml_validation/app/assets/images/local_lime.png', bbox_inches='tight')
 
     local_shap_fig, global_shap_fig, local_text_shap, global_text_shap = evaluator.shap_interpretability()
     local_shap_fig.savefig('././auto_ml_validation/app/assets/images/local_shap.png',  bbox_inches='tight')
@@ -204,8 +205,11 @@ def trans_layout(train_data:pd.DataFrame,
 
     # return html.Img(src='././app/assets/images/local_shap.jpeg')
     return html.Div([
+        html.Img(src=app.get_asset_url("images/local_lime.png")),
+        html.Img(src=app.get_asset_url("images/global_lime.png")),
         html.Img(src=app.get_asset_url("images/local_shap.png")),
-        html.Img(src=app.get_asset_url("images/global_shap.png"))])
+        html.Img(src=app.get_asset_url("images/global_shap.png")),
+        ])
 
 #html.Div( 
         #style={'backgroundColor': '#fee6c8', 'width': '95%', 'margin': 'auto'}, children=[
