@@ -53,16 +53,26 @@ class TransparencyMetricsEvaluator:
         local_lime_fig = self.lime_explainer.explain_instance(self.X.iloc[i], predict_fn, num_features=10).as_pyplot_figure()
         local_lime_fig.gca().set_title('')
 
-        sp_obj = submodular_pick.SubmodularPick(self.lime_explainer, self.X.values, predict_fn, sample_size=5, num_features=10, num_exps_desired=1)
+        sp_obj = submodular_pick.SubmodularPick(self.lime_explainer, self.X.values, predict_fn, sample_size=5, num_features=10, num_exps_desired=1).sp_explanations[0]
 
-        global_lime_fig = sp_obj.sp_explanations[0].as_pyplot_figure(label=0)
+        
+        if 0 in sp_obj.as_map():
+            global_lime_fig = sp_obj.as_pyplot_figure(label = 0)
+        else:
+            global_lime_fig = sp_obj.as_pyplot_figure(label = 1)
+ 
+
         global_lime_fig.gca().set_title('')
 
-        local_text = self.lime_explainer.explain_instance(self.X.iloc[i], predict_fn, num_features=len(X.columns))
+        local_text = self.lime_explainer.explain_instance(self.X.iloc[i], predict_fn, num_features=len(self.X.columns))
 
-        global_text = submodular_pick.SubmodularPick(self.lime_explainer, self.X.values, predict_fn, sample_size=5, num_features=len(X.columns), num_exps_desired=1).sp_explanations[0]
-        global_res = [(self.X.columns[feature], weight) for feature, weight in global_text.as_map()[0]]
-        
+        global_text = submodular_pick.SubmodularPick(self.lime_explainer, self.X.values, predict_fn, sample_size=10, num_features=len(self.X.columns), num_exps_desired=1).sp_explanations[0]
+
+
+        if 0 in sp_obj.as_map():
+            global_res = [(self.X.columns[feature], weight) for feature, weight in global_text.as_map()[0]]
+        else:
+            global_res = [(self.X.columns[feature], weight) for feature, weight in global_text.as_map()[1]]        
         
         local_res = [(feature, weight) for feature, weight in local_text.as_list()]
 
@@ -104,10 +114,10 @@ class TransparencyMetricsEvaluator:
         
         return local_plot, global_plot, local_impt_map, global_impt_map
 
+'''
 #Test
-    '''
-X = pd.read_csv('X_train_processed.csv').iloc[0:2500]
-y = pd.read_csv('y_train.csv').iloc[0:2500]
+X = pd.read_csv('X_train_processed.csv').iloc[0:100]
+y = pd.read_csv('y_train.csv').iloc[0:100]
 lr = LogisticRegression().fit(X, y)
 evaluator = TransparencyMetricsEvaluator(lr, X)
 local_lime_fig, global_lime_fig, local_text_lime, global_text_lime = evaluator.lime_interpretability()
