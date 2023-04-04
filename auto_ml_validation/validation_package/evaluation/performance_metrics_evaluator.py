@@ -44,14 +44,14 @@ class PerformanceEvaluator:
         chart_df.columns = ["postive probability"]
         fig = px.histogram(chart_df, x="postive probability",
                            title="Prediction Distribution")
-        fig.show()
+        # fig.show()
         return fig
 
     def get_confusion_matrix(self):
         return ConfusionMatrixDisplay.from_predictions(self.y_true, self.y_pred,
                                                        cmap='Oranges')
 
-    def cal_metrics(self) -> float:
+    def cal_metrics(self) -> dict[str,float]:
         return {
             "accuracy": skl.accuracy_score(self.y_true, self.y_pred),
             "precision": skl.precision_score(self.y_true, self.y_pred),
@@ -67,7 +67,7 @@ class PerformanceEvaluator:
             labels=dict(x='False Positive Rate', y='True Positive Rate'),
             width=700, height=500
         )
-        fig.show()
+       # fig.show()
         return fig
 
     def get_pr_curve(self):
@@ -79,7 +79,7 @@ class PerformanceEvaluator:
             labels=dict(x='Recall', y='Precision'),
             width=700, height=500
         )
-        fig.show()
+        # fig.show()
         return fig
 
     def cal_auc(self):

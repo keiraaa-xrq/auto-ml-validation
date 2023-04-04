@@ -4,6 +4,41 @@ from dash.dependencies import Input, Output, State
 import json
 # Body Content
 
+# callbacks
+@app.callback(
+    [Output('dist-curve', 'figure'), 
+     Output('roc-curve', 'figure'),
+     Output('pr-curve', 'figure'), 
+     #Output('metrics', 'children')
+     ],
+    [Input('threshold', 'value')]
+)
+def generate_performance_metrics(threshold):
+    with open('././models/lr.pkl', 'rb') as f:
+        model = pickle.load(f)
+    pme = performance_metrics_evaluator.PerformanceEvaluator(bm_test_data['pred_proba'],
+                                                             float(threshold),
+                                                             bm_test_data['y'],
+                                                             bm_test_data['processed_X'],
+                                                             model,)
+
+    dist = pme.get_dist_plot()
+    roc = pme.get_roc_curve()
+    pr = pme.get_pr_curve()
+    # lift = pme.get_lift_chart()
+    metrics = pme.cal_metrics()
+    # confusion_matrix = pme.get_confusion_matrix()
+
+    metrics_comp = html.Div([
+        html.H6(f'Accuracy {metrics["accuracy"]}'),
+        html.H6(f'Precision {metrics["precision"]}'),
+        html.H6(f'Recall {metrics["recall"]}'),
+        html.H6(f'F1-Score {metrics["f1_score"]}'),
+        ])
+
+    return dist, roc, pr
+# , metrics_comp
+
 # Update the PSI table when user change num of bins
 @app.callback(
     Output("psi-table", "data"),
@@ -11,8 +46,8 @@ import json
 )
 # def update_statistical_metrics(num_of_bins):
 def update_psi_table(num_of_bins):
-        my_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(train_data, 
-                                                                         test_data)
+        my_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(bm_train_data, 
+                                                                         bm_test_data)
         psi_score, psi_df = my_class.calculate_psi(num_of_bins)
         # reset index as columns for display
         psi_df.columns = psi_df.columns.astype(str)
@@ -28,8 +63,7 @@ def update_psi_table(num_of_bins):
     Input("psi-num-of-bins", "value")
 )
 def update_psi_score(num_of_bins):
-        my_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(train_data, 
-                                                                         test_data)
+        my_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(bm_train_data, bm_test_data)
         psi_score, psi_df = my_class.calculate_psi(num_of_bins)
 
         return 'PSI Score: '+ str(psi_score)
@@ -39,8 +73,7 @@ def update_psi_score(num_of_bins):
     Input("gini-feature-multi-dynamic-dropdown", "value"), 
 )            
 def update_gini(ft_name_list: list[str]):
-    stats_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(train_data, 
-                                                                                test_data)
+    stats_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(bm_train_data, bm_test_data)
     gini = stats_class.cal_feature_gini()
     
     gini_children = []
@@ -58,9 +91,10 @@ def update_gini(ft_name_list: list[str]):
     Input("csi-feature-multi-dynamic-dropdown", "value"),
     Input("csi-num-of-bins", "value")
 )
-def update_csi_metrcis(feature_list, num_of_bins):
-        stats_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(train_data, 
-                                                                                test_data)
+def update_csi_metrics(feature_list, num_of_bins):
+        
+        stats_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(bm_train_data, 
+                                                                                bm_test_data)
         
         csi_df, csi_dict = stats_class.csi_for_all_features(feature_list, num_of_bins)
 
@@ -84,19 +118,35 @@ def update_csi_metrcis(feature_list, num_of_bins):
 
 # Layout
 results_layout = html.Div(children=[
+    result_control(),
+    html.H2('Result for Replicated Model'),
+    html.Br(),
+    performance_metric_layout(),
+    # performance_metric_layout(test_data, '././models/lr.pkl'),
+    html.Br(),
+    statistical_model_metrics_layout(re_train_data, re_test_data, 10),
     html.Br(),
     html.Br(),
-    html.Br(),
-    statistical_model_metrics_layout(train_data, test_data, 10),
-    html.Br(),
-    html.Br(),
-    gini_layout(train_data, test_data,[]),
-    csi_table_layout(train_data, test_data, 
-                           [],
-                            10),
+    gini_layout(re_train_data, re_test_data,[]),
+    csi_table_layout(re_train_data, re_test_data, [], 10),
     html.Br(),
     html.Br(),
-    trans_layout(train_data, '././models/lr.pkl'),                     
+    # trans_layout(re_train_data, '././models/lr.pkl'),  
+    html.Br(),
+    html.H2('Result fo Benchmark Model'), 
+    html.Br(),
+    performance_metric_layout(),
+    # performance_metric_layout(test_data, '././models/lr.pkl'),
+    html.Br(),
+    statistical_model_metrics_layout(bm_train_data, bm_test_data, 10),
+    html.Br(),
+    html.Br(),
+    gini_layout(bm_train_data, bm_test_data,[]),
+    csi_table_layout(bm_train_data, bm_test_data, [], 10),
+    html.Br(),
+    html.Br(),
+    trans_layout(bm_train_data, '././models/lr.pkl'),  
+    html.Br(),
     ])
 
 @app.callback(Output('output-div', 'children'),
