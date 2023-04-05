@@ -3,7 +3,7 @@ import math
 import pandas as pd
 import numpy as np
 import scipy
-from ..utils.utils import check_columns
+from sklearn.metrics import roc_auc_score
 
 
 class StatisticalMetricsEvaluator:
@@ -43,9 +43,9 @@ class StatisticalMetricsEvaluator:
             f'({bin_list[i]:.2f}, {bin_list[i + 1]:.2f}]' for i in range(len(bin_list) - 1)]
         output_df = pd.DataFrame({
             'train_count': train_count,
-            'train_perc': train_perc,
-            'test_count': test_count,
-            'test_perc': test_perc,
+            'train_perc': round(train_perc,3),
+            'test_count': round(test_count,3),
+            'test_perc': round(test_perc,3),
         })
         output_df.index = df_index
 
@@ -60,7 +60,7 @@ class StatisticalMetricsEvaluator:
                 value = (actual - expected) * math.log(actual / expected)
             values.append(value)
             x = x + value
-        output_df['index_value'] = values
+        output_df['index_value'] = [round(elem, 3) for elem in values]
         return x, output_df
 
     def calculate_psi(self, num_bins=10) -> float:
@@ -91,7 +91,7 @@ class StatisticalMetricsEvaluator:
             train_l,
             test_l
         )
-        return csi, output_df
+        return round(csi,3), output_df
 
     def csi_for_all_features(self, ft_names: List[str], num_bins=10):
         # check_columns(self.train_raw_X, [ft_names])
@@ -103,8 +103,80 @@ class StatisticalMetricsEvaluator:
             df_list.append(df)
         return df_list, csi_dict
 
-    def kstest(
-        self,
-        score_col_name: str
-    ) -> float:
-        return scipy.stats.ks_2samp(self.train_processed_X[score_col_name], self.test_processed_X[score_col_name])
+    def kstest(self) -> Dict[str, float]:
+        train_pos = []
+        train_neg = []
+        for i in range(0, len(self.train_y)):
+            if self.train_y[i] == 0:
+                train_neg.append(self.train_proba[i])
+            else: 
+                train_pos.append(self.train_proba[i])
+
+        test_pos = []
+        test_neg = []
+        for i in range(0, len(self.test_y)):
+            if self.test_y[i] == 0:
+                test_neg.append(self.train_proba[i])
+            else: 
+                test_pos.append(self.train_proba[i])
+        
+        output_dict = {'Train' : round(scipy.stats.ks_2samp(train_pos, test_pos).statistic,3),
+                       'Test' :  round(scipy.stats.ks_2samp(test_pos, test_neg).statistic,3),
+                       'Train vs Test' : round(scipy.stats.ks_2samp(self.train_proba, 
+                                                       self.test_proba).statistic,3)}
+        return output_dict
+    
+
+    def cal_normalized_gini(self):
+        """Simple normalized Gini based on Scikit-Learn's roc_auc_score""" 
+        gini = lambda a, p: 2 * roc_auc_score(a, p) - 1
+        return round(gini(self.test_y, self.test_proba) / gini(self.test_y, self.test_y),3)
+
+    
+    def cal_feature_gini(self):
+        """Calculate GINI index for attributes"""  
+
+        pop_X = self.train_raw_X
+        pop_y = self.train_y
+
+        # Get the indices of the samples belonging to each class
+        class_0_indices = np.where(pop_y == 0)[0]
+        class_1_indices = np.where(pop_y == 1)[0]
+
+        # Set the number of samples to be randomly sampled as 1/100 of overall population
+        num_samples_per_class = int(pop_X.shape[0]/100)
+
+        # Randomly sample the indices from each class
+        class_0_sampled_indices = np.random.choice(class_0_indices, size=num_samples_per_class, replace=False)
+        class_1_sampled_indices = np.random.choice(class_1_indices, size=num_samples_per_class, replace=False)
+
+        # Concatenate the sampled indices and sort them to preserve the order of the original data
+        sampled_indices = np.sort(np.concatenate([class_0_sampled_indices, class_1_sampled_indices]))
+
+        # Select the corresponding samples from X and y
+        X = pop_X.iloc[sampled_indices,:]
+        y = pop_y[sampled_indices]
+
+        def _gini_impurity (value_counts):
+            n = value_counts.sum()
+            p_sum = 0
+            for key in value_counts.keys():
+                p_sum = p_sum  +  (value_counts[key] / n ) * (value_counts[key] / n ) 
+            gini = 1 - p_sum
+            return gini
+        
+        def _gini_attribute(attribute_name):
+            attribute_values = X[attribute_name].value_counts()
+            gini_A = 0 
+            for key in attribute_values.keys():
+                df_k = pd.DataFrame(y)[X[attribute_name] == key].value_counts()
+                n_k = attribute_values[key]
+                n = X.shape[0]
+                gini_A = gini_A + (( n_k / n) * _gini_impurity(df_k))
+            return round(gini_A,3)
+        
+        result = {}
+        for key in (X).columns:
+            result[key] = _gini_attribute(key)
+        
+        return result

@@ -4,7 +4,6 @@ import sklearn.metrics as skl
 import numpy as np
 import plotly.express as px
 import scikitplot as skp
-from sklearn.inspection import PartialDependenceDisplay
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from sklearn.base import BaseEstimator
 
@@ -19,6 +18,15 @@ class PerformanceEvaluator:
         X: pd.DataFrame,
         model: BaseEstimator
     ):
+        """
+        Evaluate generic model performance
+        Input:
+            - proba: predicted probability for both classes on testing dataset
+            - threshold: classification threshold
+            - y_true: true lable of testing dataset
+            - X: processed features
+            - model: the machine learning model used for generating prediction
+        """
         self.proba = proba
         self.positive_proba = proba[:, 1]
         self.threshold = threshold
@@ -28,6 +36,7 @@ class PerformanceEvaluator:
         self.model = model
 
     def get_pred(self):
+        """Get predicted label based on proba and threshold"""
         return np.array([1 if x > self.threshold else 0 for x in self.positive_proba])
 
     def get_dist_plot(self):
@@ -35,30 +44,30 @@ class PerformanceEvaluator:
         chart_df.columns = ["postive probability"]
         fig = px.histogram(chart_df, x="postive probability",
                            title="Prediction Distribution")
-        fig.show()
+        # fig.show()
         return fig
 
     def get_confusion_matrix(self):
         return ConfusionMatrixDisplay.from_predictions(self.y_true, self.y_pred,
                                                        cmap='Oranges')
 
-    def cal_metrics(self) -> float:
+    def cal_metrics(self) -> dict[str,float]:
         return {
-            "accuracy": skl.accuracy_score(self.y_true, self.y_pred),
-            "precision": skl.precision_score(self.y_true, self.y_pred),
-            "recall": skl.recall_score(self.y_true, self.y_pred),
-            "f1_score": skl.f1_score(self.y_true, self.y_pred)
+            "accuracy": round(skl.accuracy_score(self.y_true, self.y_pred),3),
+            "precision": round(skl.precision_score(self.y_true, self.y_pred),3),
+            "recall": round(skl.recall_score(self.y_true, self.y_pred),3),
+            "f1_score": round(skl.f1_score(self.y_true, self.y_pred),3)
         }
 
     def get_roc_curve(self):
-        fpr, tpr, thresholds = skl.roc_curve(self.y_true, self.positive_proba)
+        fpr, tpr, thres = skl.roc_curve(self.y_true, self.positive_proba)
         fig = px.area(
             x=fpr, y=tpr,
             title='ROC Curve',
             labels=dict(x='False Positive Rate', y='True Positive Rate'),
             width=700, height=500
         )
-        fig.show()
+       # fig.show()
         return fig
 
     def get_pr_curve(self):
@@ -70,7 +79,7 @@ class PerformanceEvaluator:
             labels=dict(x='Recall', y='Precision'),
             width=700, height=500
         )
-        fig.show()
+        # fig.show()
         return fig
 
     def cal_auc(self):
@@ -80,7 +89,7 @@ class PerformanceEvaluator:
             "ROCAUC": skl.roc_auc_score(self.y_true, self.positive_proba),
             "PRAUC": skl.auc(recall, precision)
         }
-
+    
     def get_lift_chart(self):
         return skp.metrics.plot_lift_curve(self.y_true, self.proba)
 

@@ -6,36 +6,40 @@ from lime import submodular_pick
 from lime.lime_tabular import LimeTabularExplainer
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
+import warnings
+warnings.filterwarnings("ignore")
 
 class TransparencyMetricsEvaluator:
     def __init__(self, model, X, class_name_list=None):
         """
         Initializes the TransparencyMetricsEvaluator object.
-
         Args:
             model (object): The machine learning model to evaluate interpretability for.
             X (pandas.DataFrame): The input data for the machine learning model.
             class_name_list (list, optional): A list of class names. Defaults to None.
         """
+        sample_X = X.sample(n=int(X.shape[0]/100))
+
         self.model = model
-        self.X = X
+        self.X = sample_X
         self.class_name_list = class_name_list
+
+
         
         # Initialize the LIME explainer
         self.lime_explainer = LimeTabularExplainer(
-            X.values,
-            feature_names=X.columns,
+            sample_X.values,
+            feature_names=sample_X.columns,
             discretize_continuous=False,
             class_names=[class_name_list] if class_name_list is not None else None
         )
         
         # Initialize the SHAP explainer
-        self.shap_explainer = shap.Explainer(model.predict, X)
+        self.shap_explainer = shap.Explainer(model.predict, sample_X)
     
     def lime_interpretability(self):
         """
         Calculates LIME interpretability metrics.
-
         Returns:
             tuple: A tuple containing local and global LIME plots, and local and global LIME feature importances.
         """
@@ -59,7 +63,7 @@ class TransparencyMetricsEvaluator:
 
         global_text = submodular_pick.SubmodularPick(self.lime_explainer, self.X.values, predict_fn, sample_size=10, num_features=len(self.X.columns), num_exps_desired=1).sp_explanations[0]
 
-
+        
         if 0 in sp_obj.as_map():
             global_res = [(self.X.columns[feature], weight) for feature, weight in global_text.as_map()[0]]
         else:
@@ -72,7 +76,6 @@ class TransparencyMetricsEvaluator:
     def shap_interpretability(self):
         """
         Calculates SHAP interpretability metrics.
-
         Returns:
             tuple: A tuple containing local and global SHAP plots, and local and global SHAP feature importances.
         """
@@ -104,18 +107,3 @@ class TransparencyMetricsEvaluator:
         global_plot = plt.gcf()
         
         return local_plot, global_plot, local_impt_map, global_impt_map
-
-'''
-#Test
-X = pd.read_csv('X_train_processed.csv').iloc[0:100]
-y = pd.read_csv('y_train.csv').iloc[0:100]
-lr = LogisticRegression().fit(X, y)
-evaluator = TransparencyMetricsEvaluator(lr, X)
-local_lime_fig, global_lime_fig, local_text_lime, global_text_lime = evaluator.lime_interpretability()
-local_shap_fig, global_shap_fig, local_text_shap, global_text_shap = evaluator.shap_interpretability()
-
-local_shap_fig.savefig('local_shap.png',  bbox_inches='tight')
-global_shap_fig.savefig('global_shap.png', bbox_inches='tight')
-global_lime_fig.savefig('global_lime.png', bbox_inches='tight')
-local_lime_fig.savefig('local_lime.png', bbox_inches='tight')
-'''

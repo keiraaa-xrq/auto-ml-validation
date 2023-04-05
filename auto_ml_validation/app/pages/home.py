@@ -90,7 +90,8 @@ def rep_dataset_layout() -> html.Div:
                             {'label': "K-Nearest Neighbours", "value": 'knn'},
                             {"label": "XGBoost", "value": 'xgboost'}
                         ],
-                        value=None
+                        value=None,  
+                        style={'textAlign': 'left'}
                     )
                 ]),
                 width={"size": 3, "offset": 4},
