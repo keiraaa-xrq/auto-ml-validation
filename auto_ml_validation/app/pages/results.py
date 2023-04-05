@@ -20,19 +20,6 @@ bm_test_data = data['bm_other_data']['Test']
 re_train_data = data['re_train_data']
 re_test_data = data['re_other_data']['Test']
 
-def result_control():
-    return html.Div([
-        html.Div([
-            html.Div([
-                html.H6('Classification threshold: '),
-                html.Div([
-                    html.Div(
-                        [dcc.Input(id='threshold', type='range', value=0.5, min=0, max=1)]),
-                ])
-            ])
-        ]),
-    ])
-
 def bm_performance_metric_layout():
 
     return html.Div(style={
@@ -42,16 +29,18 @@ def bm_performance_metric_layout():
         'width': '60%',
         'margin': 'auto',
         'text-align': 'center'
-    }, children=[ 
-        html.H2('Global Performance Measures', style={'font-weight': 'bold'}),
+    }, children=[
+        html.H2('Model-Based Metrics', style={'font-weight': 'bold'}),
         html.Div(style={'display': 'flex', 'justify-content': 'space-between'}, children=[
             dcc.Graph(id='dist-curve1', figure={})]),
         html.Div(style={'display1': 'flex', 'justify-content': 'space-between'}, children=[
             dcc.Graph(id='roc-curve1', figure={})]),
         html.Div(style={'display': 'flex', 'justify-content': 'space-between'}, children=[
             dcc.Graph(id='pr-curve1', figure={})]),
+        html.H6('Adjust the threshold here:', style={'font-weight': 'bold'}),
+        dcc.Input(id='threshold1', type='range', value=0.5, min=0, max=1),
         html.Div([],
-                 style={'display': 'flex', 'justify-content': 'space-between'},
+                 style={'display': 'flex', 'justify-content': 'space-between', 'text-align': 'center'},
                  id='metrics1',)
                  
         ])
@@ -66,15 +55,18 @@ def re_performance_metric_layout():
         'margin': 'auto',
         'text-align': 'center'
     }, children=[ 
-        html.H2('Global Performance Measures', style={'font-weight': 'bold'}),
+        html.H2('Model-Based Metrics', style={'font-weight': 'bold'}),
+        
         html.Div(style={'display': 'flex', 'justify-content': 'space-between'}, children=[
             dcc.Graph(id='dist-curve2', figure={})]),
         html.Div(style={'display': 'flex', 'justify-content': 'space-between'}, children=[
             dcc.Graph(id='roc-curve2', figure={})]),
         html.Div(style={'display': 'flex', 'justify-content': 'space-between'}, children=[
             dcc.Graph(id='pr-curve2', figure={})]),
+        html.H6('Adjust the threshold here:', style={'font-weight': 'bold'}),
+        dcc.Input(id='threshold2', type='range', value=0.5, min=0, max=1),
         html.Div([],
-                 style={'display': 'flex', 'justify-content': 'space-between'},
+                 style={'display': 'flex', 'justify-content': 'space-between', 'text-align': 'center'},
                  id='metrics2',)
         ])
 
@@ -89,7 +81,9 @@ def bm_statistical_model_metrics_layout(train_data: pd.DataFrame,
     psi_df = psi_df.reset_index()
     psi_df['index'] = psi_df['index'].astype(str)
     psi_df.rename(columns = {'index':'ranges'}, inplace = True)
+    psi_df = psi_df.round(2)
     ks_dict = my_class.kstest()
+
 
     return html.Div(style={
         'border': '2px solid black',
@@ -135,6 +129,7 @@ def re_statistical_model_metrics_layout(train_data: pd.DataFrame,
     psi_df = psi_df.reset_index()
     psi_df['index'] = psi_df['index'].astype(str)
     psi_df.rename(columns = {'index':'ranges'}, inplace = True)
+    psi_df = psi_df.round(2)
     ks_dict = my_class.kstest()
 
     return html.Div(style={
@@ -160,7 +155,7 @@ def re_statistical_model_metrics_layout(train_data: pd.DataFrame,
                   pattern=r'\d*'),
         html.Br(),
         dash_table.DataTable(id='psi-table2',
-                              data=psi_df.to_dict('records'),
+                              data=psi_df.round(2).to_dict('records'),
                               columns=[{'name': i, 'id': i} for i in psi_df.columns],
                               sort_action='native'),
         html.Br(),
@@ -186,6 +181,7 @@ def bm_gini_layout(train_data: pd.DataFrame,
         },
         children=[
             html.Br(),
+            html.H2('Feature-Based Metrics', style={'font-weight': 'bold'}),
             html.H3('GINI Index',  style={
                 'textAlign': 'center', 
                 'fontWeight': 'bold',
@@ -231,6 +227,7 @@ def re_gini_layout(train_data: pd.DataFrame,
         },
         children=[
             html.Br(),
+            html.H2('Feature-Based Metrics', style={'font-weight': 'bold'}),
             html.H3('GINI Index',  style={
                 'textAlign': 'center', 
                 'fontWeight': 'bold',

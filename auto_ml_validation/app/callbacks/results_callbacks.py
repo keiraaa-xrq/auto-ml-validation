@@ -11,7 +11,7 @@ import json
      Output('pr-curve1', 'figure'), 
      Output('metrics1', 'children')
      ],
-    [Input('threshold', 'value')]
+    [Input('threshold1', 'value')]
 )
 def generate_bm_performance_metrics(threshold):
     with open('././models/lr.pkl', 'rb') as f:
@@ -44,7 +44,7 @@ def generate_bm_performance_metrics(threshold):
      Output('pr-curve2', 'figure'), 
      Output('metrics2', 'children')
      ],
-    [Input('threshold', 'value')]
+    [Input('threshold2', 'value')]
 )
 def generate_re_performance_metrics(threshold):
     with open('././models/lr.pkl', 'rb') as f:
@@ -87,6 +87,7 @@ def update_bm_psi_table(num_of_bins):
         psi_df = psi_df.reset_index()
         psi_df['index'] = psi_df['index'].astype(str)
         psi_df.rename(columns = {'index':'ranges'}, inplace = True)
+        psi_df = psi_df.round(2)
 
         return psi_df.to_dict('records')
 
@@ -105,6 +106,7 @@ def update_re_psi_table(num_of_bins):
         psi_df = psi_df.reset_index()
         psi_df['index'] = psi_df['index'].astype(str)
         psi_df.rename(columns = {'index':'ranges'}, inplace = True)
+        psi_df = psi_df.round(2)
 
         return psi_df.to_dict('records')
         
@@ -178,13 +180,14 @@ def update_bm_csi_metrics(feature_list, num_of_bins):
                 df.columns = df.columns.astype(str)
                 df = df.reset_index()
                 df['index'] = df['index'].astype(str)
+                df = df.round(2)
                 df.rename(columns = {'index':'ranges'}, inplace = True)
                 csi_children.append(html.Br())
                 csi_children.append(html.Br())
                 csi_children.append(html.H5(ft_name + ' CSI Score:    ' + str(csi_dict[ft_name]),
                                             style={'textAlign': 'center', 'fontWeight': 'bold'}))
                 csi_children.append(dash_table.DataTable(id=ft_name+"-csi-table",
-                                                        data= df.to_dict('records'), 
+                                                        data= df.round(2).to_dict('records'), 
                                                         columns=[{"name": i, "id": i} for i in df.columns], 
                                                         sort_action='native'))
         return html.Div(id="feature_related_viz1", children = csi_children)
@@ -210,6 +213,7 @@ def update_re_csi_metrics(feature_list, num_of_bins):
                 df = df.reset_index()
                 df['index'] = df['index'].astype(str)
                 df.rename(columns = {'index':'ranges'}, inplace = True)
+                df = df.round(2)
                 csi_children.append(html.Br())
                 csi_children.append(html.Br())
                 csi_children.append(html.H5(ft_name + ' CSI Score:    ' + str(csi_dict[ft_name]),
@@ -223,8 +227,7 @@ def update_re_csi_metrics(feature_list, num_of_bins):
 
 # Layout
 results_layout = html.Div(children=[
-    result_control(),
-    html.H2('Result for Replicated Model'),
+    html.H1('Result for Replicated Model', style={'text-align': 'center'}),
     html.Br(),
     re_performance_metric_layout(),
     # performance_metric_layout(test_data, '././models/lr.pkl'),
@@ -238,7 +241,7 @@ results_layout = html.Div(children=[
     html.Br(),
     # re_trans_layout(re_train_data, '././models/lr.pkl'),   
     html.Br(),
-    html.H2('Result fo Benchmark Model'), 
+    html.H1('Result for Benchmark Model', style={'text-align': 'center'}), 
     html.Br(),
     bm_performance_metric_layout(),
     html.Br(),
