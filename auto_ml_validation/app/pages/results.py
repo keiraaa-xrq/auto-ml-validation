@@ -1,5 +1,6 @@
 import dash
 from dash import html, dcc, dash_table
+import dash_bootstrap_components as dbc
 import pandas as pd
 import numpy as np
 from auto_ml_validation.validation_package.evaluation import statistical_metrics_evaluator
@@ -354,3 +355,10 @@ def re_trans_layout()->html.Div:
                  html.H4('Global Shap Plot', style={'fontWeight': 'bold'}),
                  html.Img(id='global-shap-re', src=app.get_asset_url("images/global_shap_re.png"),style=img_style),
                  ])
+
+def download_report_layout():
+    return html.Div(dbc.Button("Download", 
+                                        id="download-report", 
+                                        color="primary",
+                                        className="mx-auto d-block"),
+                            style={"marginTop": "20px", "textAlign": "center"})

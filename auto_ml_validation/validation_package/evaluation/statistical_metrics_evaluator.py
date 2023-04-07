@@ -136,8 +136,8 @@ class StatisticalMetricsEvaluator:
     def cal_feature_gini(self):
         """Calculate GINI index for attributes"""  
 
-        pop_X = self.train_raw_X
-        pop_y = self.train_y
+        pop_X = self.train_raw_X.iloc[0:100, :]
+        pop_y = self.train_y[0:100]
 
         # Get the indices of the samples belonging to each class
         class_0_indices = np.where(pop_y == 0)[0]

@@ -4,88 +4,121 @@ Consolidate all the evaluations and generate word format report
 
 from typing import *
 import pandas as pd
-from validation_package.evaluation.index import ModelEvaluator
-from validation_package.algorithms.logistic_regression import LogisticClassifier
-from docx import Document
-from docx.shared import Inches
+from .evaluation import *
 
 
 def evaluation_pipeline(
-        X_train: pd.DataFrame,
-        y_train: pd.Series,
-        X_test: pd.DateOffset,
-        y_test: pd.Series,
-        raw_train: pd.DataFrame,
-        raw_test: pd.DataFrame,
-        class_name_list: List[str],
-        proba: pd.Series,
-        model,
-        benchmark_model: Optional[any],
-        benchmark_proba: Optional[pd.Series],
-        threshold: float
+    model,
+    train: Dict[str, Union[pd.DataFrame, np.ndarray]],
+    test: Dict[str, Union[pd.DataFrame, np.ndarray]],
+    threshold: float,
+    selected_features: List[str],
+    psi_bin: int, csi_bin: int
 ):
-    evaluator = ModelEvaluator(
-        X_train, y_train, X_test, y_test, raw_train, raw_test, class_name_list)
-    model_performance = evaluator.evaluate_model(model, proba, threshold)
-    if benchmark_model and benchmark_proba:
-        benchmark_performance = evaluator.evaluate_model(
-            benchmark_model, benchmark_proba, threshold)
-
-    # generate report
-    generate_report(model_performance)
-
-
-def generate_report(mp, bp: Optional[any] = None):
     """
-    Format and generate word report in docs.
-
+    Takes in model, data and parameters and generate one dictionary of numerical results and one dictionary for graphical results
     Input:
-    - mp: model performance
-    - bp: benchmark model performance. If provided, comparison will be included.
+        train, test: dictionary with 'raw_X', 'processed_X', 'y', 'pred_proba' as keys and pandas DataFrame or numpy ndarray as values
 
     """
-    # Save images to local
-    # !! for plotly chart, the package kaleido is required to export the chart
-    for c in ["dist", "pr", "roc"]:
-        mp[c].write_image(f'{c}.png')
-    for c in ["lift"]:
-        mp[c].figure.savefig(f'{c}.png')
-    for c in ["pdp", "confusion"]:
-        mp[c].figure_.savefig(f'{c}.png')
+    # check whether the dictionary contains all the datasets needed
 
-    doc = Document()
-    doc.add_heading('Model Validation Report', 0)
-    doc.add_heading('Model Performance Metrics', 1)
-    doc.add_paragraph(
-        'This section includes generic model performance metrics.')
-    doc.add_picture('dist.png')
-    doc.add_paragraph(
-        f"Accuracy: {mp['metrics']['accuracy']} \n Precision: {mp['metrics']['precision']} \n Recall: {mp['metrics']['recall']} \n F1 Score: {mp['metrics']['f1_score']}")
-    doc.add_picture('lift.png')
-    doc.save('report.docx')
+    # performance
 
+    print("Evaluating model performance metrics...")
+    pme = PerformanceEvaluator(
+        test['pred_proba'], threshold, test['y'], test['processed_X'], model)
+    try:
+        metrics = pme.cal_metrics()
+    except Exception as e:
+        print(f'Error in calculating performance metrics: {e}')
+        metrics = None
+    try:
+        auc = pme.cal_auc()
+    except Exception as e:
+        print(f'Error in calculating ROC AUC: {e}')
+        auc = None
+    try:
+        dist = pme.get_dist_plot()
+    except Exception as e:
+        print(f'Error in ploting probaility distributions: {e}')
+        dist = None
+    try:
+        confusion = pme.get_confusion_matrix()
+    except Exception as e:
+        print(f'Error in ploting confusion matrix: {e}')
+        confusion = None
+    try:
+        roc = pme.get_roc_curve()
+    except Exception as e:
+        print(f'Error in ploting ROC curve: {e}')
+        roc = None
+    try:
+        pr = pme.get_pr_curve()
+    except Exception as e:
+        print(f'Error in ploting Precision-Recall curve: {e}')
+        pr = None
+    try:
+        lift = pme.get_lift_chart()
+    except Exception as e:
+        print(f'Error in ploting Lift chart: {e}')
+        lift = None
+    print("Model performance metrics evaluation done!")
 
-def main():
-    X_train = pd.read_csv(
-        "~/Desktop/Capstone/auto-ml-validation/data/stage_2/loanstats_train_X_processed.csv")
-    y_train = pd.read_csv(
-        "~/Desktop/Capstone/auto-ml-validation/data/stage_2/loanstats_train_y.csv")
-    X_test = pd.read_csv(
-        '~/Desktop/Capstone/auto-ml-validation/data/stage_2/loanstats_test_X_processed.csv')
-    y_test = pd.read_csv(
-        "~/Desktop/Capstone/auto-ml-validation/data/stage_2/loanstats_test_y.csv")
-    raw_train = pd.read_csv(
-        "~/Desktop/Capstone/auto-ml-validation/data/stage_2/loanstats_train.csv")
-    raw_test = pd.read_csv(
-        "~/Desktop/Capstone/auto-ml-validation/data/stage_2/loanstats_test.csv")
-    model = LogisticClassifier()
-    model.fit(X_train, y_train)
-    proba = model.predict_proba(X_test)
-    print("Start evaluating model.")
-    evaluation_pipeline(X_train, y_train, X_test, y_test, raw_train,
-                        raw_test, None, proba, model._model, None, None, 0.5)
-    print("Evaluation done!")
+    # statistical
+    print("Evaluating statistical metrics...")
+    sme = StatisticalMetricsEvaluator(train, test)
+    try:
+        psi, psi_df = sme.calculate_psi(num_bins=psi_bin)
+    except Exception as e:
+        print(f'Error in calculating PSI: {e}')
+        psi = psi_df = None
+    try:
+        csi_list, csi_dict = sme.csi_for_all_features(selected_features, csi_bin)
+    except Exception as e:
+        print(f'Error in calculating CSI: {e}')
+        csi_list = csi_dict = None
+    try:
+        ks = sme.kstest()
+    except Exception as e:
+        print(f'Error in KS test: {e}')
+        ks = None
+    try:
+        feature_gini = sme.cal_feature_gini()
+    except Exception as e:
+        print(f'Error in calculating gini index for features: {e}')
+        feature_gini = None
+    try:
+        dataset_gini = sme.cal_normalized_gini()
+    except Exception as e:
+        print(f'Error in calculating global gini index: {e}')
+        dataset_gini = None
+    print("Statistical metrics evaluation done!")
 
+    # transparency
+    print("Evaluating transparency metrics...")
+    tme = TransparencyMetricsEvaluator(
+        model, train['processed_X'].iloc[:100, :])
+    try:
+        local_lime_fig, global_lime_fig, local_lime_lst, global_lime_map = tme.lime_interpretability()
+    except Exception as e:
+        print(f'Error in LIME interpretability: {e}')
+        local_lime_fig = global_lime_fig = local_lime_lst = global_lime_map = None
+    try:
+        local_shap_fig, global_shap_fig, local_impt_map, global_impt_map = tme.shap_interpretability()
+    except Exception as e:
+        print(f'Error in SHAP interpretability: {e}')
+        local_shap_fig = global_shap_fig = local_impt_map = global_impt_map = None
+    print("Transparency metrics evaluation done!")
 
-if __name__ == "__main__":
-    main()
+    charts = {
+        "dist": dist, "lift": lift, "pr": pr, "roc": roc, "confusion": confusion,
+        "local_lime": local_lime_fig, "global_lime": global_lime_fig, "local_shap": local_shap_fig, "global_shap": global_shap_fig,
+    }
+    txt = {
+        "metrics": metrics, "feature_gini": feature_gini, "auc": auc, "dataset_gini": dataset_gini,
+        "local_lime": local_lime_lst, "global_lime": global_lime_map, "local_shap": local_impt_map, "global_shap": global_impt_map,
+        "psi": psi, "psi_df": psi_df,
+        "csi_list": csi_list, "csi_dict": csi_dict, "ks": ks
+    }
+    return charts, txt
