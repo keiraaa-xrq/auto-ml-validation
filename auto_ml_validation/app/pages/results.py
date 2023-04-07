@@ -11,6 +11,81 @@ from sklearn.linear_model import LogisticRegression
 from auto_ml_validation.app.index import app
 import matplotlib.pyplot as plt
 
+def sticky_headers():
+    bm_header = dbc.Navbar(
+    dbc.Container(
+        [
+            dbc.Row(
+                [
+                    dbc.Col(
+                        html.H2(
+                            'Result for Benchmark Model',
+                            style={
+                                'font-weight': 'bold',
+                                'font-size': '30px',
+                                'margin-top': '20px',
+                                'margin-bottom': '10px',
+                                'text-transform': 'uppercase',
+                                'letter-spacing': '1px',
+                                'color': '#333333',
+                                'text-align': 'center'
+                            },
+                        ),
+                    ),
+                ],
+                align='center',
+            )
+        ]
+    ),
+    color='white',
+    dark=False,
+    sticky='top',
+    style={
+        'display': 'flex',
+        'justify-content': 'center',
+        'align-items': 'center',
+        'height': '10vh',
+    },
+    )
+    
+    re_header = dbc.Navbar(
+    dbc.Container(
+        [
+            dbc.Row(
+                [
+                    dbc.Col(
+                        html.H2(
+                            'Result for Replicated Model',
+                            style={
+                                'font-weight': 'bold',
+                                'font-size': '30px',
+                                'margin-top': '20px',
+                                'margin-bottom': '10px',
+                                'text-transform': 'uppercase',
+                                'letter-spacing': '1px',
+                                'color': '#333333',
+                            },
+                        ),
+                    ),
+                ],
+                align='center',
+            )
+        ]
+    ),
+    color='white',
+    dark=False,
+    sticky='top',
+    style={
+        'display': 'flex',
+        'justify-content': 'center',
+        'align-items': 'center',
+        'height': '10vh',
+    },
+    )
+    return re_header, bm_header
+
+
+
 def bm_performance_metric_layout():
     return html.Div(style={
         'border': '2px solid black',
@@ -47,11 +122,11 @@ def re_performance_metric_layout():
         'text-align': 'center'
     }, children=[ 
         html.H2('Global Performance Measures', style={'font-weight': 'bold'}),
-        html.Div(style={'display': 'flex', 'justify-content': 'space-between'}, children=[
+        html.Div(style={'display': 'flex', 'justify-content': 'center'}, children=[
             dcc.Graph(id='dist-curve-re', figure={})]),
-        html.Div(style={'display': 'flex', 'justify-content': 'space-between'}, children=[
+        html.Div(style={'display': 'flex', 'justify-content': 'center'}, children=[
             dcc.Graph(id='roc-curve-re', figure={})]),
-        html.Div(style={'display': 'flex', 'justify-content': 'space-between'}, children=[
+        html.Div(style={'display': 'flex', 'justify-content': 'center'}, children=[
             dcc.Graph(id='pr-curve-re', figure={})]),
         html.H6(id='threshold-text-re',children='0.5', style={'font-weight': 'bold'}),
         dcc.Input(id='threshold-re', type='range', value=0.5, min=0, max=1),
@@ -315,16 +390,15 @@ def re_csi_table_layout()-> html.Div:
         ]
     )
     
-
 def bm_trans_layout()->html.Div:
     img_style = {'width': '600px', 'height': '400px', 'object-fit': 'contain'}
     return html.Div(style={
-        'border': '1px solid black',
-        'padding': '10px',
-        'margin': '10px auto',
-        'max-width': '800px',
-        'background-color': '#FFD580',
-        'text-align': 'center'
+            'background-color': '#EFEFEF',
+            'border': '2px solid black',
+            'padding': '20px',
+            'width': '100%',
+            'margin': 'auto',
+            'text-align': 'center'
     }, children=[html.H2('Transparency Metrics', style={'text-align': 'center'}),
                  html.H4('Local Lime Plot', style={'fontWeight': 'bold'}),
                  html.Img(id='local-lime', src=app.get_asset_url("images/local_lime_bm.png"), style=img_style),
@@ -339,12 +413,12 @@ def bm_trans_layout()->html.Div:
 def re_trans_layout()->html.Div:
     img_style = {'width': '600px', 'height': '400px', 'object-fit': 'contain'}
     return html.Div(style={
-        'border': '1px solid black',
-        'padding': '10px',
-        'margin': '10px auto',
-        'max-width': '800px',
-        'background-color': '#FFD580',
-        'text-align': 'center'
+            'background-color': '#EFEFEF',
+            'border': '2px solid black',
+            'padding': '20px',
+            'width': '100%',
+            'margin': 'auto',
+            'text-align': 'center'
     }, children=[html.H2('Transparency Metrics', style={'text-align': 'center'}),
                  html.H4('Local Lime Plot', style={'fontWeight': 'bold'}),
                  html.Img(id='local-lime-re', src=app.get_asset_url("images/local_lime_re.png"), style=img_style),

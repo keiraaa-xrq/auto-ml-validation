@@ -52,18 +52,18 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
         re_train_data, re_other_data = run_model_replication(
             auto_train, auto_test, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, rep_save_path)
     except Exception as e:
-        error_message = "Returning to homepage... An error occurred while replicating the model: %s." % str(
-            e)
+        error_message = "Returning to homepage... An error occurred while replicating the model: %s." % str(e)
         log_error(logger, error_message)
         raise e
 
     try:
+        if feat_sel_bool:
+            log_info(logger, 'Beginning Feature Selection...')
         log_info(logger, 'Creating the benchmark model...')
         bm_train_data, bm_other_data = run_auto_bmk(
             auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs=-1, mode='parallel', save_path=auto_save_path)
     except Exception as e:
-        error_message = "Returning to homepage... An error occurred while creating the benchmark model: %s. " % str(
-            e)
+        error_message = "Returning to homepage... An error occurred while creating the benchmark model: %s. " % str(e)
         log_error(logger, error_message)
         raise e
 
@@ -128,7 +128,7 @@ def run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, fe
 
     # To inverse OHE, col_mapping dictionary (k, v) where k is OHE processed column and v is original column
     feats_selected = benchmark_output[benchmark_model.name]['features_selected']
-    feats_selected_mapped = [col_mapping.get(col, col) for col in feats_selected]
+    feats_selected_mapped = set([col_mapping.get(col, col) for col in feats_selected])
 
     bm_train_proba = benchmark_model.predict_proba(full_auto_X_train[feats_selected])
     # To predict for test and all other datasets

@@ -3,63 +3,51 @@ from auto_ml_validation.app.pages.results import *
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 import json
+from ...validation_package.evaluation import performance_metrics_evaluator as pme
 from ...validation_package.evaluation_pipeline import evaluation_pipeline
 from ...validation_package.report.generate_report import generate_report
 
 # Layout
-re_layout = html.Div(children=[
-    html.H2('Result for Replicated Model',  style={
-            'text-align': 'center',
-            'font-weight': 'bold',
-            'font-size': '30px',
-            'margin-top': '20px',
-            'margin-bottom': '10px',
-            'text-transform': 'uppercase',
-            'letter-spacing': '1px',
-            'color': '#333333'}),
-    html.Br(),
-    re_performance_metric_layout(),
-    re_statistical_model_metrics_layout(),
-    re_gini_layout(),
-    re_csi_table_layout(),
-    re_trans_layout(),
-], style={'width': '100%', 'display': 'inline-block', 'vertical-align': 'top'})
+re_header, bm_header = sticky_headers()
 
-bm_layout = html.Div(children=[
-    html.H2('Result for Benchmark Model',  style={
-            'text-align': 'center',
-            'font-weight': 'bold',
-            'font-size': '30px',
-            'margin-top': '20px',
-            'margin-bottom': '10px',
-            'text-transform': 'uppercase',
-            'letter-spacing': '1px',
-            'color': '#333333'
-            }),
-    html.Br(),
-    bm_performance_metric_layout(),
-    bm_statistical_model_metrics_layout(),
-    bm_gini_layout(),
-    bm_csi_table_layout(),
-    bm_trans_layout(),
-], style={'width': '100%', 'display': 'inline-block', 'vertical-align': 'top'})
+re_layout = html.Div(
+    children=[
+        re_header,
+        html.Br(),
+        re_performance_metric_layout(),
+        re_statistical_model_metrics_layout(),
+        re_gini_layout(),
+        re_csi_table_layout(),
+        re_trans_layout(),
+    ],
+    style={'width': '100%', 'display': 'inline-block', 'vertical-align': 'top','justify-content': 'center',
+        'align-items': 'center',
+        'flex-direction': 'column'},
+)
 
-results_layout = html.Div(children=[
-    download_report_layout(),
-    html.Br(),
-    html.Div([
-        re_layout,
-        bm_layout,
-    ], style={'display': 'flex'}),
-    dcc.Store(id='re-result', data = {}, storage_type ='session'),
-    dcc.Store(id='bm-result', data = {}, storage_type = 'session'),
-    dcc.Store(id='report-trigger', data = False, storage_type = 'session'),
-])
+bm_layout = html.Div(
+    children=[
+        bm_header,
+        html.Br(),
+        bm_performance_metric_layout(),
+        bm_statistical_model_metrics_layout(),
+        bm_gini_layout(),
+        bm_csi_table_layout(),
+        bm_trans_layout(),
+    ],
+    style={'width': '100%', 'display': 'inline-block', 'vertical-align': 'top'},
+)
 
+results_layout = html.Div(
+    children=[
+        html.Div(download_report_layout(), style={'margin-left': 'auto', 'display': 'inline-block'}),
+        html.Br(),
+        html.Div([re_layout, bm_layout], style={'display': 'flex'}),
+        dcc.Store(id='report-trigger', data=False, storage_type='session'),
+    ]
+)
 # Callbacks
 # Output generic performance metrics for both Model Replication and Auto-Benchmark
-
-
 @app.callback(
     [Output('dist-curve', 'figure'), Output('roc-curve', 'figure'), Output('pr-curve', 'figure'), Output('metrics', 'children'),
      Output('dist-curve-re', 'figure'), Output('roc-curve-re', 'figure'), Output('pr-curve-re', 'figure'), Output('metrics-re', 'children')],
@@ -77,18 +65,17 @@ def generate_performance_metrics(threshold_bm, threshold_re, trigger, file_name)
 
         with open(f'././models/{file_name_split[0]}_auto_{file_name_split[2]}.pkl', 'rb') as f:
             model = pickle.load(f)
-        pme = performance_metrics_evaluator.PerformanceEvaluator(bm_test_data['pred_proba'],
-                                                                 float(
-                                                                     threshold_bm),
-                                                                 bm_test_data['y'],
-                                                                 bm_test_data['processed_X'],
-                                                                 model,)
+        pme_obj = pme.PerformanceEvaluator(bm_test_data['pred_proba'],
+                                            float(threshold_bm),
+                                            bm_test_data['y'],
+                                            bm_test_data['processed_X'],
+                                            model)
 
-        dist_bm = pme.get_dist_plot()
-        roc_bm = pme.get_roc_curve()
-        pr_bm = pme.get_pr_curve()
+        dist_bm = pme_obj.get_dist_plot()
+        roc_bm = pme_obj.get_roc_curve()
+        pr_bm = pme_obj.get_pr_curve()
         # lift = pme.get_lift_chart()
-        metrics = pme.cal_metrics()
+        metrics = pme_obj.cal_metrics()
         # confusion_matrix = pme.get_confusion_matrix()
 
         metrics_comp = html.Div([
@@ -104,18 +91,17 @@ def generate_performance_metrics(threshold_bm, threshold_re, trigger, file_name)
 
         with open(f'././models/{file_name_split[0]}_{file_name_split[1]}_rep_{file_name_split[2]}.pkl', 'rb') as f:
             model = pickle.load(f)
-        pme = performance_metrics_evaluator.PerformanceEvaluator(re_test_data['pred_proba'],
-                                                                 float(
-                                                                     threshold_re),
-                                                                 re_test_data['y'],
-                                                                 re_test_data['processed_X'],
-                                                                 model)
+        pme_obj = pme.PerformanceEvaluator(re_test_data['pred_proba'],
+                                           float(threshold_re),
+                                           re_test_data['y'],
+                                           re_test_data['processed_X'],
+                                           model)
 
-        dist_re = pme.get_dist_plot()
-        roc_re = pme.get_roc_curve()
-        pr_re = pme.get_pr_curve()
+        dist_re = pme_obj.get_dist_plot()
+        roc_re = pme_obj.get_roc_curve()
+        pr_re = pme_obj.get_pr_curve()
         # lift = pme.get_lift_chart()
-        metrics_re = pme.cal_metrics()
+        metrics_re = pme_obj.cal_metrics()
         # confusion_matrix = pme.get_confusion_matrix()
 
         metrics_comp_re = html.Div([
@@ -177,8 +163,8 @@ def output_psi_ks_table(num_of_bins, trigger, file_name):
         psi_df.rename(columns={'index': 'ranges'}, inplace=True)
 
         ks_dict = my_class.kstest()
-        ks_output = [html.H6('KS Test Train: ' + str(ks_dict['Train']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
-                     html.H6('KS Test Test: ' + str(ks_dict['Test']), style={
+        ks_output = [html.H6('KS Train: ' + str(ks_dict['Train']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
+                     html.H6('KS Test: ' + str(ks_dict['Test']), style={
                              'textAlign': 'left', 'fontWeight': 'bold'}),
                      html.H6('KS Test Train & Test: ' + str(ks_dict['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
         # Model Replication
@@ -192,8 +178,8 @@ def output_psi_ks_table(num_of_bins, trigger, file_name):
         psi_df_re.rename(columns={'index': 'ranges'}, inplace=True)
 
         ks_dict_re = my_class_re.kstest()
-        ks_output_re = [html.H6('KS Test Train: ' + str(ks_dict_re['Train']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
-                        html.H6('KS Test Test: ' + str(ks_dict_re['Test']), style={
+        ks_output_re = [html.H6('KS Train: ' + str(ks_dict_re['Train']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
+                        html.H6('KS Test: ' + str(ks_dict_re['Test']), style={
                                 'textAlign': 'left', 'fontWeight': 'bold'}),
                         html.H6('KS Test Train & Test: ' + str(ks_dict_re['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
         return psi_df.to_dict('records'), psi_score_text, [{"name": col, "id": col} for col in psi_df.columns], ks_output, psi_df_re.to_dict('records'), psi_score_text_re, [{"name": col, "id": col} for col in psi_df_re.columns], ks_output_re
@@ -371,12 +357,10 @@ def update_csi_metrics_re(feature_list, num_of_bins, trigger, file_name):
 
 # Output transparency metrics for both models
 
-
+"""
 @app.callback(
-    Output("global-lime", "src"), Output("local-lime",
-                                         "src"), Output("global-shap", "src"), Output("local-shap", "src"),
-    Output("global-lime-re", "src"), Output("local-lime-re",
-                                            "src"), Output("global-shap-re", "src"), Output("local-shap-re", "src"),
+    Output("global-lime", "src"), Output("local-lime", "src"), Output("global-shap", "src"), Output("local-shap", "src"),
+    Output("global-lime-re", "src"), Output("local-lime-re","src"), Output("global-shap-re", "src"), Output("local-shap-re", "src"),
     Input('validator-input-trigger', 'data'),
     Input('validator-input-file', 'data')
 )
@@ -437,24 +421,19 @@ def output_transparency_plots(trigger, file_name):
             local_shap_re = app.get_asset_url("images/local_shap_re.png")
 
         return global_lime_bm, local_lime_bm, global_shap_bm, local_shap_bm, global_lime_re, local_lime_re, global_shap_re, local_shap_re
-
-
+"""
 # Run the evaluation pipeline and generate word doc report
 @app.callback(
-    Output('re-results', 'data'), Output('bm-results', 'data'),
+    Output('report-trigger', 'data'),
     Input('validator-input-trigger', 'data'), Input('validator-input-file', 'data'),
     Input('threshold', 'value'), Input('threshold-re', 'value'), 
     Input("csi-feature-multi-dynamic-dropdown", "value"), Input("psi-num-of-bins", "value"), Input("csi-num-of-bins", "value"),
+    Input('download-report', 'n_clicks')
 )
-def run_evaluation_pipeline(trigger, file_name, re_thres, bm_thres, csi_selected_ft, psi_bins, csi_bins):
+def run_evaluation_pipeline(trigger, file_name, bm_thres, re_thres, csi_selected_ft, psi_bins, csi_bins, n_clicks):
     if trigger:
         with open(f'././data/validator_input/{file_name}', 'rb') as f:
             output_dict = pickle.load(f)
-            # Benchmark Output
-            # re_train_data = data['re_train_data']
-            # re_test_data = data['re_other_data']
-            # bm_train_data = data['bm_other_data']
-            # bm_test_data = data['bm_other_data']
 
         file_name_split = file_name.split('_')
         with open(f'././models/{file_name_split[0]}_auto_{file_name_split[2]}.pkl', 'rb') as f:
@@ -468,10 +447,10 @@ def run_evaluation_pipeline(trigger, file_name, re_thres, bm_thres, csi_selected
         re_other_data = output_dict['re_other_data']
         for ds_name, test_data in re_other_data.items():
             charts, txt = evaluation_pipeline(
-                re_model.model,
+                re_model,
                 output_dict['re_train_data'],
                 test_data,
-                re_thres,
+                float(re_thres),
                 csi_selected_ft, psi_bins, csi_bins
             )
             re_eval_outputs[ds_name] = {}
@@ -483,10 +462,10 @@ def run_evaluation_pipeline(trigger, file_name, re_thres, bm_thres, csi_selected
             bm_other_data = output_dict['bm_other_data']
             for ds_name, test_data in bm_other_data.items():
                 charts, txt = evaluation_pipeline(
-                    bm_model.model,
+                    bm_model,
                     output_dict['bm_train_data'],
                     test_data,
-                    bm_thres,
+                    float(bm_thres),
                     csi_selected_ft, psi_bins, csi_bins
                 )
                 bm_eval_outputs[ds_name] = {}
@@ -494,18 +473,10 @@ def run_evaluation_pipeline(trigger, file_name, re_thres, bm_thres, csi_selected
                 bm_eval_outputs[ds_name]['txt'] = txt
         else:
             bm_eval_outputs = None
-        
+        if n_clicks:
+            generate_report(re_eval_outputs, bm_eval_outputs)
+            return True
 
-        return re_eval_outputs, bm_eval_outputs
 
 
-@app.callback(
-    Output('report-trigger', 'data'),
-    Input('download-report', 'n_clicks'), Input('re-results', 'data'), Input('bm-results', 'data')
-)
-def download_report(n_clicks, re_results, bm_results):
-    if n_clicks:
-        generate_report(re_results, bm_results)
-        return True
-    else:
-        return False
+

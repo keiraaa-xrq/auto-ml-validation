@@ -24,7 +24,7 @@ def evaluation_pipeline(
     # check whether the dictionary contains all the datasets needed
 
     # performance
-
+    
     print("Evaluating model performance metrics...")
     pme = PerformanceEvaluator(
         test['pred_proba'], threshold, test['y'], test['processed_X'], model)
@@ -64,7 +64,7 @@ def evaluation_pipeline(
         print(f'Error in ploting Lift chart: {e}')
         lift = None
     print("Model performance metrics evaluation done!")
-
+    
     # statistical
     print("Evaluating statistical metrics...")
     sme = StatisticalMetricsEvaluator(train, test)
