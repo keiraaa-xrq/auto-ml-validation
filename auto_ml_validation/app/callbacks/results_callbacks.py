@@ -20,9 +20,7 @@ re_layout = html.Div(
         re_csi_table_layout(),
         re_trans_layout(),
     ],
-    style={'width': '100%', 'display': 'inline-block', 'vertical-align': 'top','justify-content': 'center',
-        'align-items': 'center',
-        'flex-direction': 'column'},
+    style={'width': '100%', 'display': 'inline-block', 'vertical-align': 'top',},
 )
 
 bm_layout = html.Div(
@@ -40,10 +38,9 @@ bm_layout = html.Div(
 
 results_layout = html.Div(
     children=[
-        html.Div(download_report_layout(), style={'margin-left': 'auto', 'display': 'inline-block'}),
+        html.Div(download_report_layout(), style={'float': 'right', "margin-right": "30px"}),
         html.Br(),
-        html.Div([re_layout, bm_layout], style={'display': 'flex'}),
-        dcc.Store(id='report-trigger', data=False, storage_type='session'),
+        html.Div([re_layout, bm_layout], style={'display': 'flex',  'clear': 'right'})
     ]
 )
 # Callbacks
@@ -112,8 +109,6 @@ def generate_performance_metrics(threshold_bm, threshold_re, trigger, file_name)
         return dist_bm, roc_bm, pr_bm, metrics_comp, dist_re, roc_re, pr_re, metrics_comp_re
 
 # Update benchmark threshold value
-
-
 @app.callback(
     Output('threshold-text', 'children'),
     Input('threshold', 'value')
@@ -122,8 +117,6 @@ def update_threshold_text_bm(value):
     return 'Adjust the threshold here: %.2f' % float(value)
 
 # Update benchmark threshold value
-
-
 @app.callback(
     Output('threshold-text-re', 'children'),
     Input('threshold-re', 'value')
@@ -132,13 +125,9 @@ def update_threshold_text_re(value):
     return 'Adjust the threshold here: %.2f' % float(value)
 
 # Output PSI and KSI
-
-
 @app.callback(
-    Output("psi-table", "data"), Output("psi-score",
-                                        "text"), Output('psi-table', 'columns'), Output("ks-tests", "children"),
-    Output("psi-table-re", "data"), Output("psi-score-re",
-                                           "text"), Output('psi-table-re', 'columns'), Output("ks-tests-re", "children"),
+    Output("psi-table", "data"), Output("psi-score","text"), Output('psi-table', 'columns'), Output("ks-tests", "children"),
+    Output("psi-table-re", "data"), Output("psi-score-re","text"), Output('psi-table-re', 'columns'), Output("ks-tests-re", "children"),
     Input("psi-num-of-bins", "value"),
     Input('validator-input-trigger', 'data'),
     Input('validator-input-file', 'data')
@@ -184,8 +173,6 @@ def output_psi_ks_table(num_of_bins, trigger, file_name):
         return psi_df.to_dict('records'), psi_score_text, [{"name": col, "id": col} for col in psi_df.columns], ks_output, psi_df_re.to_dict('records'), psi_score_text_re, [{"name": col, "id": col} for col in psi_df_re.columns], ks_output_re
 
 # Update gini features selection based on train dataset for both models
-
-
 @app.callback(
     Output("gini-feature-multi-dynamic-dropdown",
            "options"), Output("gini-feature-multi-dynamic-dropdown-re", "options"),
@@ -202,8 +189,6 @@ def update_gini(trigger, file_name):
     return []
 
 # Output gini metric for benchmark model
-
-
 @app.callback(
     Output("gini-viz", "children"),
     Input("gini-feature-multi-dynamic-dropdown", "value"),
@@ -229,8 +214,6 @@ def update_bm_gini(ft_name_list: list[str], trigger, file_name):
         return gini_children
 
 # Output gini metric for model replication
-
-
 @app.callback(
     Output("gini-viz-re", "children"),
     Input("gini-feature-multi-dynamic-dropdown-re", "value"),
@@ -256,8 +239,6 @@ def update_re_gini(ft_name_list: list[str], trigger, file_name):
         return gini_children
 
 # Generate and populate csi feature metrics for both models
-
-
 @app.callback(
     Output("csi-feature-multi-dynamic-dropdown",
            "options"), Output("csi-feature-multi-dynamic-dropdown-re", "options"),
@@ -314,8 +295,6 @@ def update_csi_metrics_bm(feature_list, num_of_bins, trigger, file_name):
         return csi_children
 
 # Update the CSI when user select features
-
-
 @app.callback(
     Output("feature-related-viz-re", "children"),
     Input("csi-feature-multi-dynamic-dropdown-re", "value"),
@@ -355,8 +334,6 @@ def update_csi_metrics_re(feature_list, num_of_bins, trigger, file_name):
         return csi_children
 
 # Output transparency metrics for both models
-
-"""
 @app.callback(
     Output("global-lime", "src"), Output("local-lime", "src"), Output("global-shap", "src"), Output("local-shap", "src"),
     Output("global-lime-re", "src"), Output("local-lime-re","src"), Output("global-shap-re", "src"), Output("local-shap-re", "src"),
@@ -376,8 +353,7 @@ def output_transparency_plots(trigger, file_name):
         bm_train_data = data['bm_train_data']
         re_train_data = data['re_train_data']
 
-        evaluator = transparency_metrics_evaluator.TransparencyMetricsEvaluator(
-            auto_model, bm_train_data['processed_X'])
+        evaluator = transparency_metrics_evaluator.TransparencyMetricsEvaluator(auto_model, bm_train_data['processed_X'].sample(100)) # Too large, hence we take a sample
 
         local_lime_fig, global_lime_fig, local_text_lime, global_text_lime = evaluator.lime_interpretability()
         global_lime_fig.savefig(
@@ -396,8 +372,7 @@ def output_transparency_plots(trigger, file_name):
         local_shap_bm = app.get_asset_url("images/local_shap_bm.png")
 
         try:
-            evaluator = transparency_metrics_evaluator.TransparencyMetricsEvaluator(
-                re_model, re_train_data['processed_X'])
+            evaluator = transparency_metrics_evaluator.TransparencyMetricsEvaluator(re_model, re_train_data['processed_X'].sample(100))
 
             local_lime_fig, global_lime_fig, local_text_lime, global_text_lime = evaluator.lime_interpretability()
             global_lime_fig.savefig(
@@ -420,17 +395,17 @@ def output_transparency_plots(trigger, file_name):
             local_shap_re = app.get_asset_url("images/local_shap_re.png")
 
         return global_lime_bm, local_lime_bm, global_shap_bm, local_shap_bm, global_lime_re, local_lime_re, global_shap_re, local_shap_re
-"""
+
 # Run the evaluation pipeline and generate word doc report
 @app.callback(
-    Output('report-trigger', 'data'),
+    Output('report-message', 'children'),
     Input('validator-input-trigger', 'data'), Input('validator-input-file', 'data'),
     Input('threshold', 'value'), Input('threshold-re', 'value'), 
     Input("csi-feature-multi-dynamic-dropdown", "value"), Input("psi-num-of-bins", "value"), Input("csi-num-of-bins", "value"),
     Input('download-report', 'n_clicks')
 )
 def run_evaluation_pipeline(trigger, file_name, bm_thres, re_thres, csi_selected_ft, psi_bins, csi_bins, n_clicks):
-    if trigger:
+    if trigger and n_clicks:
         with open(f'././data/validator_input/{file_name}', 'rb') as f:
             output_dict = pickle.load(f)
 
@@ -473,7 +448,5 @@ def run_evaluation_pipeline(trigger, file_name, bm_thres, re_thres, csi_selected
         else:
             bm_eval_outputs = None
 
-        if n_clicks:
-            generate_report(re_eval_outputs, bm_eval_outputs)
-            print("Report generated!")
-            return True
+        generate_report(re_eval_outputs, bm_eval_outputs)
+        return "Report generated!"

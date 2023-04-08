@@ -45,7 +45,7 @@ class PerformanceEvaluator:
         chart_df.columns = ["postive probability"]
         fig = go.Figure(layout=dict(template='plotly'))
         fig = px.histogram(chart_df, x="postive probability",
-                           title="Prediction Distribution")
+                           title="Prediction Distribution", color_discrete_sequence=['#FFA07A'])
         # fig.show()
         return fig
 
@@ -67,7 +67,7 @@ class PerformanceEvaluator:
             x=fpr, y=tpr,
             title='ROC Curve',
             labels=dict(x='False Positive Rate', y='True Positive Rate'),
-            width=700, height=500
+            width=700, height=500, color_discrete_sequence=['#FFA07A']
         )
        # fig.show()
         return fig
@@ -79,7 +79,7 @@ class PerformanceEvaluator:
             x=recall, y=precision,
             title='Precision-Recall Curve',
             labels=dict(x='Recall', y='Precision'),
-            width=700, height=500
+            width=700, height=500, color_discrete_sequence=['#FFA07A']
         )
         # fig.show()
         return fig

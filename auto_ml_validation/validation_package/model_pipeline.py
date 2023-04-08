@@ -93,13 +93,13 @@ def run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test
     rep_model, valid_threshold = replicate(rep_X_train, rep_y_train, *rep_others_X_y[0], algorithm, hyperparams, metric, save=True, save_path=save_path)
     re_train_proba = rep_model.predict_proba(rep_X_train)
 
-    re_train_data = {'raw_X': auto_train.drop(
-        target, axis=1), 'processed_X': rep_X_train, 'y': rep_y_train, 'pred_proba': re_train_proba}
+    re_train_data = {'raw_X': auto_train.drop(target, axis=1)[sorted(auto_train.drop(target, axis=1).columns)], 'processed_X': rep_X_train, 'y': rep_y_train, 'pred_proba': re_train_proba}
     re_other_data = {}
     for i, (X, y) in enumerate(rep_others_X_y):
         key = "Test" if i == 0 else f"Other{i}"
         re_other_data[key] = {}
-        re_other_data[key]['raw_X'] = auto_others[i].drop(columns=[target])
+        raw_X = auto_others[i].drop(columns=[target])
+        re_other_data[key]['raw_X'] = raw_X[sorted(raw_X.columns)]
         re_other_data[key]['processed_X'] = rep_others_X_y[i][0]
         re_other_data[key]['y'] = [tup[1] for tup in rep_others_X_y][i]
         re_other_data[key]['pred_proba'] = rep_model.predict_proba(rep_others_X_y[i][0])
@@ -131,15 +131,17 @@ def run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, fe
     feats_selected_mapped = set([col_mapping.get(col, col) for col in feats_selected])
 
     bm_train_proba = benchmark_model.predict_proba(full_auto_X_train[feats_selected])
-    # To predict for test and all other datasets
+    auto_train_upper = auto_train[feats_selected_mapped].rename(columns=str.upper)
     best_auto_X_train = full_auto_X_train[feats_selected]
-    bm_train_data = {'raw_X': auto_train[feats_selected_mapped].T.drop_duplicates().T, 'processed_X': best_auto_X_train, 'y': full_auto_y_train, 'pred_proba': bm_train_proba}
-
+    bm_train_data = {'raw_X': auto_train_upper[sorted(auto_train_upper.columns)], 'processed_X': best_auto_X_train, 'y': full_auto_y_train, 'pred_proba': bm_train_proba}
+    
+    # To predict for test and all other datasets
     bm_other_data = {}
     for i, (X, y) in enumerate(auto_others):
         key = "Test" if i == 0 else f"Other{i}"
         bm_other_data[key] = {}
-        bm_other_data[key]['raw_X'] = auto_others_raw[i][feats_selected_mapped].T.drop_duplicates().T
+        raw_X = auto_others_raw[i][feats_selected_mapped].rename(columns=str.upper)
+        bm_other_data[key]['raw_X'] = raw_X[sorted(raw_X.columns)]
         bm_other_data[key]['processed_X'] = auto_others[i][0][feats_selected]
         bm_other_data[key]['y'] = auto_others[i][1]
 

@@ -84,8 +84,6 @@ def sticky_headers():
     )
     return re_header, bm_header
 
-
-
 def bm_performance_metric_layout():
     return html.Div(style={
         'border': '2px solid black',
@@ -96,11 +94,11 @@ def bm_performance_metric_layout():
         'text-align': 'center'
     }, children=[ 
         html.H2('Global Performance Measures', style={'font-weight': 'bold'}),
-        html.Div(style={'display': 'flex', 'justify-content': 'space-between'}, children=[
+        html.Div(style={'display': 'flex', 'justify-content': 'center'}, children=[
             dcc.Graph(id='dist-curve', figure={})]),
-        html.Div(style={'display': 'flex', 'justify-content': 'space-between'}, children=[
+        html.Div(style={'display': 'flex', 'justify-content': 'center'}, children=[
             dcc.Graph(id='roc-curve', figure={})]),
-        html.Div(style={'display': 'flex', 'justify-content': 'space-between'}, children=[
+        html.Div(style={'display': 'flex', 'justify-content': 'center'}, children=[
             dcc.Graph(id='pr-curve', figure={})]),
         html.H6(id='threshold-text', children='Adjust the threshold here: 0.5', style={'font-weight': 'bold'}),
         dcc.Input(id='threshold', type='range', value=0.5, min=0, max=1),
@@ -293,7 +291,6 @@ def re_gini_layout()-> html.Div:
         ]
     )
 
-
 def bm_csi_table_layout()-> html.Div:
     return html.Div(
         style={
@@ -356,7 +353,7 @@ def re_csi_table_layout()-> html.Div:
             html.H3('CSI Metrics', style={
                 'textAlign': 'center', 
                 'fontWeight': 'bold',
-                'margin-bottom': '20px'  # add margin below title
+                'margin-bottom': '20px' 
             }),
             html.Br(),
             html.Label('Features to Display:', style={'font-weight': 'bold'}),
@@ -431,8 +428,35 @@ def re_trans_layout()->html.Div:
                  ])
 
 def download_report_layout():
-    return html.Div(dbc.Button("Download", 
-                                        id="download-report", 
-                                        color="primary",
-                                        className="mx-auto d-block"),
-                            style={"marginTop": "20px", "textAlign": "center"})
+    return html.Div([
+        dbc.Button(
+            "Download Report", 
+            id="download-report", 
+            color="primary",
+            className="mx-auto d-block",
+            style={
+                "marginTop": "20px", 
+                "textAlign": "center",
+                "border": "none",
+                "color": "white",
+                "padding": "10px 20px",
+                "text-align": "center",
+                "text-decoration": "none",
+                "display": "inline-block",
+                "font-size": "16px",
+                "border-radius": "4px",
+                "margin-right": "60px"
+            }
+        ),
+        html.Div(
+            [
+                dbc.Spinner(
+                    html.Div(id="report-message", style={"margin-top": "15px", "text-align": "center"}),
+                    size="lg",
+                    color="primary",
+                    type="grow"
+                )
+            ],
+            style={"margin-right": "30px"}
+        ),
+    ])
