@@ -65,6 +65,7 @@ def generate_performance_metrics(threshold_bm, threshold_re, trigger, file_name)
 
         with open(f'././models/{file_name_split[0]}_auto_{file_name_split[2]}.pkl', 'rb') as f:
             model = pickle.load(f)
+
         pme_obj = pme.PerformanceEvaluator(bm_test_data['pred_proba'],
                                             float(threshold_bm),
                                             bm_test_data['y'],
@@ -74,9 +75,7 @@ def generate_performance_metrics(threshold_bm, threshold_re, trigger, file_name)
         dist_bm = pme_obj.get_dist_plot()
         roc_bm = pme_obj.get_roc_curve()
         pr_bm = pme_obj.get_pr_curve()
-        # lift = pme.get_lift_chart()
         metrics = pme_obj.cal_metrics()
-        # confusion_matrix = pme.get_confusion_matrix()
 
         metrics_comp = html.Div([
             html.H6(f'Accuracy {metrics["accuracy"]}'),
@@ -473,10 +472,8 @@ def run_evaluation_pipeline(trigger, file_name, bm_thres, re_thres, csi_selected
                 bm_eval_outputs[ds_name]['txt'] = txt
         else:
             bm_eval_outputs = None
+
         if n_clicks:
             generate_report(re_eval_outputs, bm_eval_outputs)
+            print("Report generated!")
             return True
-
-
-
-

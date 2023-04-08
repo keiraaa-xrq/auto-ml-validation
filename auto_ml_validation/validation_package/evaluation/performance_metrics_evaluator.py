@@ -3,6 +3,7 @@ import pandas as pd
 import sklearn.metrics as skl
 import numpy as np
 import plotly.express as px
+import plotly.graph_objs as go
 import scikitplot as skp
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from sklearn.base import BaseEstimator
@@ -42,6 +43,7 @@ class PerformanceEvaluator:
     def get_dist_plot(self):
         chart_df = pd.DataFrame(self.positive_proba)
         chart_df.columns = ["postive probability"]
+        fig = go.Figure(layout=dict(template='plotly'))
         fig = px.histogram(chart_df, x="postive probability",
                            title="Prediction Distribution")
         # fig.show()
@@ -51,7 +53,7 @@ class PerformanceEvaluator:
         return ConfusionMatrixDisplay.from_predictions(self.y_true, self.y_pred,
                                                        cmap='Oranges')
 
-    def cal_metrics(self) -> dict[str,float]:
+    def cal_metrics(self) -> Dict[str,float]:
         return {
             "accuracy": round(skl.accuracy_score(self.y_true, self.y_pred),3),
             "precision": round(skl.precision_score(self.y_true, self.y_pred),3),
