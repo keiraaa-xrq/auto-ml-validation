@@ -16,8 +16,10 @@ re_layout = html.Div(
         html.Br(),
         re_performance_metric_layout(),
         re_statistical_model_metrics_layout(),
+        html.Br(),
         re_gini_layout(),
         re_csi_table_layout(),
+        html.Br(),
         re_trans_layout(),
     ],
     style={'width': '100%', 'display': 'inline-block', 'vertical-align': 'top',},
@@ -29,8 +31,10 @@ bm_layout = html.Div(
         html.Br(),
         bm_performance_metric_layout(),
         bm_statistical_model_metrics_layout(),
+        html.Br(),
         bm_gini_layout(),
         bm_csi_table_layout(),
+        html.Br(),
         bm_trans_layout(),
     ],
     style={'width': '100%', 'display': 'inline-block', 'vertical-align': 'top'},
@@ -151,7 +155,9 @@ def output_psi_ks_table(num_of_bins, trigger, file_name):
         psi_df.rename(columns={'index': 'ranges'}, inplace=True)
 
         ks_dict = my_class.kstest()
-        ks_output = [html.H6('KS Train: ' + str(ks_dict['Train']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
+        ks_output = [html.H3('Kolmogorov–Smirnov statistic'),
+                     html.H6('Quantifies a distance of the distribution within the training sample and testing sample, or between the two.'),
+                     html.H6('KS Train: ' + str(ks_dict['Train']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
                      html.H6('KS Test: ' + str(ks_dict['Test']), style={
                              'textAlign': 'left', 'fontWeight': 'bold'}),
                      html.H6('KS Test Train & Test: ' + str(ks_dict['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
@@ -166,7 +172,9 @@ def output_psi_ks_table(num_of_bins, trigger, file_name):
         psi_df_re.rename(columns={'index': 'ranges'}, inplace=True)
 
         ks_dict_re = my_class_re.kstest()
-        ks_output_re = [html.H6('KS Train: ' + str(ks_dict_re['Train']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
+        ks_output_re = [html.H3('Kolmogorov–Smirnov statistic'),
+                        html.H6('Quantifies a distance of the distribution within the training sample and testing sample, or between the two.'),
+                        html.H6('KS Train: ' + str(ks_dict_re['Train']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
                         html.H6('KS Test: ' + str(ks_dict_re['Test']), style={
                                 'textAlign': 'left', 'fontWeight': 'bold'}),
                         html.H6('KS Test Train & Test: ' + str(ks_dict_re['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]

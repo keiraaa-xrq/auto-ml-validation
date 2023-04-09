@@ -94,12 +94,21 @@ def bm_performance_metric_layout():
         'text-align': 'center'
     }, children=[ 
         html.H2('Global Performance Measures', style={'font-weight': 'bold'}),
-        html.Div(style={'display': 'flex', 'justify-content': 'center'}, children=[
-            dcc.Graph(id='dist-curve', figure={})]),
-        html.Div(style={'display': 'flex', 'justify-content': 'center'}, children=[
-            dcc.Graph(id='roc-curve', figure={})]),
-        html.Div(style={'display': 'flex', 'justify-content': 'center'}, children=[
-            dcc.Graph(id='pr-curve', figure={})]),
+        html.H6('Probability distribution from model prediction output.'),
+        dcc.Loading(id="loading-dist-curve", type="circle",
+            style={'display': 'flex', 'justify-content': 'center'}, children=[
+            dcc.Graph(id='dist-curve-re', figure={})]),
+        html.H6('Shows the performance of the model at all classification thresholds. Higher AUC indicates a better model.'),
+        dcc.Loading(id="loading-roc-curve", type="circle",
+            style={'display': 'flex', 'justify-content': 'center'}, children=[
+            dcc.Graph(id='roc-curve-re', figure={})]),
+        html.H6('Shows the tradeoff between precision and recall for different thresholds '+
+                'in binary classification problems. A high area under the curve represents both '+
+                'high recall and high precision, where high precision relates to a low false '+
+                'positive rate, and high recall relates to a low false negative rate. '),
+        dcc.Loading(id="loading-pr-curve", type="circle",
+            style={'display': 'flex', 'justify-content': 'center'}, children=[
+            dcc.Graph(id='pr-curve-re', figure={})]),
         html.H6(id='threshold-text', children='Adjust the threshold here: 0.5', style={'font-weight': 'bold'}),
         dcc.Input(id='threshold', type='range', value=0.5, min=0, max=1),
         html.Div(id='metrics', style={
@@ -119,12 +128,21 @@ def re_performance_metric_layout():
         'margin': 'auto',
         'text-align': 'center'
     }, children=[ 
-        html.H2('Global Performance Measures', style={'font-weight': 'bold'}),
-        html.Div(style={'display': 'flex', 'justify-content': 'center'}, children=[
+        html.H2('Model Related Measures', style={'font-weight': 'bold'}),
+        html.H6('Probability distribution from model prediction output.'),
+        dcc.Loading(id="loading-dist-curve", type="circle",
+            style={'display': 'flex', 'justify-content': 'center'}, children=[
             dcc.Graph(id='dist-curve-re', figure={})]),
-        html.Div(style={'display': 'flex', 'justify-content': 'center'}, children=[
+        html.H6('Shows the performance of the model at all classification thresholds. Higher AUC indicates a better model.'),
+        dcc.Loading(id="loading-roc-curve", type="circle",
+            style={'display': 'flex', 'justify-content': 'center'}, children=[
             dcc.Graph(id='roc-curve-re', figure={})]),
-        html.Div(style={'display': 'flex', 'justify-content': 'center'}, children=[
+        html.H6('Shows the tradeoff between precision and recall for different thresholds '+
+                'in binary classification problems. A high area under the curve represents both '+
+                'high recall and high precision, where high precision relates to a low false '+
+                'positive rate, and high recall relates to a low false negative rate. '),
+        dcc.Loading(id="loading-pr-curve", type="circle",
+            style={'display': 'flex', 'justify-content': 'center'}, children=[
             dcc.Graph(id='pr-curve-re', figure={})]),
         html.H6(id='threshold-text-re',children='0.5', style={'font-weight': 'bold'}),
         dcc.Input(id='threshold-re', type='range', value=0.5, min=0, max=1),
@@ -149,6 +167,7 @@ def bm_statistical_model_metrics_layout() -> html.Div:
         html.H5(id='psi-score',
                 children='',
                 style={'font-weight': 'bold'}),
+        html.H6('A metric to measure how much a variable has shifted in distribution between two samples over time. '),
         html.Br(),
         html.Label('Please choose the number of bins to be sliced: '),
         dcc.Input(id='psi-num-of-bins',
@@ -188,6 +207,7 @@ def re_statistical_model_metrics_layout() -> html.Div:
         html.H5(id='psi-score-re',
                 children='',
                 style={'font-weight': 'bold'}),
+        html.H6('A metric to measure how much a variable has shifted in distribution between two samples over time. '),
         html.Br(),
         html.Label('Please choose the number of bins to be sliced: '),
         dcc.Input(id='psi-num-of-bins-re',
@@ -224,12 +244,16 @@ def bm_gini_layout()-> html.Div:
             'text-align': 'center'
         },
         children=[
-            html.Br(),
+            html.H2('Feature Related Measures', style={'font-weight': 'bold'}),
             html.H3('GINI Index',  style={
                 'textAlign': 'center', 
                 'fontWeight': 'bold',
                 'margin-bottom': '20px'  # add margin below title
             }),
+            html.H6('A measurement used to build Decision Trees to determine how the features of a dataset'+
+                    ' should split nodes to form the tree. It calculates the probability of a certain randomly'+
+                    'selected feature that is classified incorrectly. An attribute with the smallest Gini Impurity'+
+                    ' should be selected for splitting the node.'),
             html.Label('Select Features to Display:', style={'font-weight': 'bold'}),
             dcc.Dropdown(
                 id="gini-feature-multi-dynamic-dropdown", 
@@ -263,12 +287,16 @@ def re_gini_layout()-> html.Div:
             'text-align': 'center'
         },
         children=[
-            html.Br(),
+            html.H2('Feature Related Measures', style={'font-weight': 'bold'}),
             html.H3('GINI Index',  style={
                 'textAlign': 'center', 
                 'fontWeight': 'bold',
                 'margin-bottom': '20px'  # add margin below title
             }),
+            html.H6('A measurement used to build Decision Trees to determine how the features of a dataset'+
+                    ' should split nodes to form the tree. It calculates the probability of a certain randomly'+
+                    'selected feature that is classified incorrectly. An attribute with the smallest Gini Impurity'+
+                    ' should be selected for splitting the node.'),
             html.Label('Select Features to Display:', style={'font-weight': 'bold'}),
             dcc.Dropdown(
                 id="gini-feature-multi-dynamic-dropdown-re", 
@@ -307,7 +335,9 @@ def bm_csi_table_layout()-> html.Div:
                 'fontWeight': 'bold',
                 'margin-bottom': '20px'  # add margin below title
             }),
-            html.Br(),
+            html.H6('CSI compares the distribution of an independent variable in the training data set '+
+                    'to a testing data set. It detects shifts in the distributions of input variables that '+
+                    'are submitted for scoring over time.'),
             html.Label('Features to Display:', style={'font-weight': 'bold'}),
             dcc.Dropdown(
                 id="csi-feature-multi-dynamic-dropdown", 
@@ -355,7 +385,9 @@ def re_csi_table_layout()-> html.Div:
                 'fontWeight': 'bold',
                 'margin-bottom': '20px' 
             }),
-            html.Br(),
+            html.H6('CSI compares the distribution of an independent variable in the training data set '+
+                    'to a testing data set. It detects shifts in the distributions of input variables that '+
+                    'are submitted for scoring over time.'),
             html.Label('Features to Display:', style={'font-weight': 'bold'}),
             dcc.Dropdown(
                 id="csi-feature-multi-dynamic-dropdown-re", 
@@ -390,13 +422,23 @@ def re_csi_table_layout()-> html.Div:
 def bm_trans_layout()->html.Div:
     img_style = {'width': '600px', 'height': '400px', 'object-fit': 'contain'}
     return html.Div(style={
-            'background-color': '#EFEFEF',
+            'background-color': '#B8E2F4',
             'border': '2px solid black',
             'padding': '20px',
             'width': '100%',
             'margin': 'auto',
             'text-align': 'center'
-    }, children=[html.H2('Transparency Metrics', style={'text-align': 'center'}),
+    }, children=[html.H2('Transparency Metrics', style={'text-align': 'center', 'font-weight': 'bold'}),
+                 html.H6('''
+                 SHAP is a method for interpreting the output of any machine learning model by computing 
+                 the contribution of each feature to the final prediction. SHAP is based on the concept of 
+                 Shapley values from cooperative game theory, which measures the marginal contribution of 
+                 each feature to the final prediction by averaging over all possible feature combinations. 
+                 By computing the SHAP values for each feature, we can determine which features had the most 
+                 significant impact on the prediction. \n The SHAP plot shows the average impact of each 
+                 feature on the model's output across all instances in the dataset. The features are sorted 
+                 in descending order of importance, and the magnitude and direction of the impact are shown. \n 
+                 '''),
                  html.H4('Local Lime Plot', style={'fontWeight': 'bold'}),
                  html.Img(id='local-lime', src=app.get_asset_url("images/local_lime_bm.png"), style=img_style),
                  html.H4('Global Lime Plot', style={'fontWeight': 'bold'}),
@@ -410,13 +452,26 @@ def bm_trans_layout()->html.Div:
 def re_trans_layout()->html.Div:
     img_style = {'width': '600px', 'height': '400px', 'object-fit': 'contain'}
     return html.Div(style={
-            'background-color': '#EFEFEF',
+            'background-color': '#B8E2F4',
+            # '#D8F9FF'
             'border': '2px solid black',
             'padding': '20px',
             'width': '100%',
             'margin': 'auto',
             'text-align': 'center'
-    }, children=[html.H2('Transparency Metrics', style={'text-align': 'center'}),
+    }, children=[html.H2('Transparency Metrics', style={'text-align': 'center', 'font-weight': 'bold'}),
+                 html.H6('LIME is a method that helps to explain the predictions of any machine learning' + 
+                         'model by approximating the model locally with an interpretable model. LIME works '+
+                         'by perturbing the input data and observing the changes in the output of the model. ' +
+                         'The perturbed data is then used to train a new, interpretable model that ' +
+                         'approximates the behavior of the original model in that local region. ' +
+                         'The resulting model can then be used to explain why the original model made '+
+                         'a particular prediction. \n The LIME chart shows the coefficients assigned '+
+                         'to each feature by the interpretable model. The coefficients indicate the direction '+
+                         'and magnitude of the impact of each feature on the model''s output. '+
+                         'Positive coefficients indicate that the feature has a positive impact on the Class1, '+
+                         'while negative coefficients indicate a positive impact on Class 0.                   '+
+                         '                                                                                '),
                  html.H4('Local Lime Plot', style={'fontWeight': 'bold'}),
                  html.Img(id='local-lime-re', src=app.get_asset_url("images/local_lime_re.png"), style=img_style),
                  html.H4('Global Lime Plot', style={'fontWeight': 'bold'}),

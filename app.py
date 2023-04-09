@@ -10,7 +10,9 @@ navbar = header.NavBar(app)
 
 
 ########################## Body ##########################
-content = html.Div(id='page-content', children=[home_callbacks.home_layout], 
+content = html.Div(id='page-content', 
+                   children=[results_callbacks.results_layout], 
+                   # children=[home_callbacks.home_layout], 
                    )
 
 ########################## Callback ##########################
@@ -37,4 +39,4 @@ app.layout = html.Div([navbar,
 
 
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)
