@@ -100,9 +100,7 @@ def generate_performance_metrics(threshold_bm, threshold_re, trigger, file_name)
         dist_re = pme_obj.get_dist_plot()
         roc_re = pme_obj.get_roc_curve()
         pr_re = pme_obj.get_pr_curve()
-        # lift = pme.get_lift_chart()
         metrics_re = pme_obj.cal_metrics()
-        # confusion_matrix = pme.get_confusion_matrix()
 
         metrics_comp_re = html.Div([
             html.H6(f'Accuracy {metrics_re["accuracy"]}'),
@@ -160,7 +158,7 @@ def output_psi_ks_table(num_of_bins, trigger, file_name):
                      html.H6('KS Train: ' + str(ks_dict['Train']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
                      html.H6('KS Test: ' + str(ks_dict['Test']), style={
                              'textAlign': 'left', 'fontWeight': 'bold'}),
-                     html.H6('KS Test Train & Test: ' + str(ks_dict['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
+                     html.H6('KS Train & Test: ' + str(ks_dict['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
         # Model Replication
         my_class_re = statistical_metrics_evaluator.StatisticalMetricsEvaluator(re_train_data,
                                                                                 re_test_data)
@@ -177,7 +175,7 @@ def output_psi_ks_table(num_of_bins, trigger, file_name):
                         html.H6('KS Train: ' + str(ks_dict_re['Train']), style={'textAlign': 'left', 'fontWeight': 'bold'}),
                         html.H6('KS Test: ' + str(ks_dict_re['Test']), style={
                                 'textAlign': 'left', 'fontWeight': 'bold'}),
-                        html.H6('KS Test Train & Test: ' + str(ks_dict_re['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
+                        html.H6('KS Train & Test: ' + str(ks_dict_re['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
         return psi_df.to_dict('records'), psi_score_text, [{"name": col, "id": col} for col in psi_df.columns], ks_output, psi_df_re.to_dict('records'), psi_score_text_re, [{"name": col, "id": col} for col in psi_df_re.columns], ks_output_re
 
 # Update gini features selection based on train dataset for both models

@@ -94,7 +94,7 @@ def instantiate_clfs(n_sample: int) -> List[AbstractBinaryClassifier]:
     xgb = XGBoostClassifier()
     svc = SVClassifier()
     if n_sample < 8000:
-        clfs = [dt, knn, lg, rf, xgb, svc] 
+        clfs = [dt]#[dt, knn, lg, rf, xgb, svc] 
     elif n_sample < 15000:
         clfs = [dt, knn, lg, rf, xgb]
     else:
