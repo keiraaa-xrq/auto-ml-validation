@@ -27,6 +27,7 @@ llvmlite = "^0.39.1"
 shap = "^0.41.0"
 python-docx = "0.8.11"
 kaleido = "0.2.1"
+docx = "^0.2.4"
 
 
 [tool.poetry.group.dev.dependencies]
