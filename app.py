@@ -11,8 +11,8 @@ navbar = header.NavBar(app)
 
 ########################## Body ##########################
 content = html.Div(id='page-content', 
-                   children=[results_callbacks.results_layout], 
-                   # children=[home_callbacks.home_layout], 
+                   # children=[results_callbacks.results_layout], 
+                   children=[home_callbacks.home_layout], 
                    )
 
 ########################## Callback ##########################

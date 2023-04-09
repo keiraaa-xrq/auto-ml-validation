@@ -439,6 +439,7 @@ def bm_trans_layout()->html.Div:
                  feature on the model's output across all instances in the dataset. The features are sorted 
                  in descending order of importance, and the magnitude and direction of the impact are shown. \n 
                  '''),
+                 html.Br(),
                  html.H4('Local Lime Plot', style={'fontWeight': 'bold'}),
                  html.Img(id='local-lime', src=app.get_asset_url("images/local_lime_bm.png"), style=img_style),
                  html.H4('Global Lime Plot', style={'fontWeight': 'bold'}),
