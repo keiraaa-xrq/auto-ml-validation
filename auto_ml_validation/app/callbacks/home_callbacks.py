@@ -27,7 +27,7 @@ loading_layout = loading_div_layout(app)
 
 # Layout
 home_layout = html.Div([
-    dcc.Location(id='url', refresh=False, pathname='/home'),
+    # dcc.Location(id='url', refresh=False, pathname='/home'),
     form,
     html.Div(children=[rep_layout, auto_layout,
              submit_button], id='content_div'),
@@ -277,11 +277,12 @@ def parse_data(content, filename):
     State("store-project", "data"),
     State("store-rep-data", "data"),
     State("store-auto-data", "data"),
-    State('url', 'pathname'),
+    # State('url', 'pathname'),
     prevent_initial_call=True
 )
-def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
+def modelling_process(loading, proj, rep_data, auto_data):
     if loading:
+        # print(loading)
         project_dict = json.loads(proj)
         rep_dict = json.loads(rep_data[0])
         auto_dict = json.loads(auto_data[0])
@@ -308,9 +309,9 @@ def modelling_process(loading, proj, rep_data, auto_data, current_pathname):
                                                                            auto_train, auto_test, auto_other, metric, feat_sel)
             return '/results', "", True, output_path, rep_path, bm_path
         except Exception as e:
-            return '/home', f"Model Building has failed. Error: {e}. Please try again. ", False, None
+            return '/home', f"Model Building has failed. Error: {e}. Please try again. ", False, None, None
 
-    return current_pathname, "", False, None, None, None
+    # return current_pathname, "", False, None, None, None
 
 # Periodically update progress text
 

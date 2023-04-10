@@ -1,11 +1,13 @@
+import matplotlib.pyplot as plt
 from auto_ml_validation.app.index import app
 from auto_ml_validation.app.pages.results import *
 from dash.dependencies import Input, Output, State
-import dash_bootstrap_components as dbc
 import json
 from ...validation_package.evaluation import performance_metrics_evaluator as pme
 from ...validation_package.evaluation_pipeline import evaluation_pipeline
 from ...validation_package.report.generate_report import generate_report
+
+plt.switch_backend('Agg')
 
 # Layout
 re_header, bm_header = sticky_headers()
@@ -42,12 +44,13 @@ bm_layout = html.Div(
 )
 
 results_layout = html.Div(
+    id="results-layout",
     children=[
         html.Div(download_report_layout(), style={
                  'float': 'right', "margin-right": "30px"}),
         html.Br(),
         html.Div([re_layout, bm_layout], style={
-                 'display': 'flex',  'clear': 'right'})
+                 'display': 'flex',  'clear': 'right'}),
     ]
 )
 # Callbacks
@@ -55,66 +58,95 @@ results_layout = html.Div(
 
 
 @app.callback(
-    [Output('dist-curve', 'figure'), Output('roc-curve', 'figure'), Output('pr-curve', 'figure'), Output('metrics', 'children'),
-     Output('dist-curve-re', 'figure'), Output('roc-curve-re', 'figure'), Output('pr-curve-re', 'figure'), Output('metrics-re', 'children')],
-    [Input('threshold', 'value'), Input('threshold-re', 'value'),
-     Input('validator-input-trigger', 'data'),
-     Input('validator-input-file', 'data'),
-     Input("validator-rep-model", "data"),
-     Input("validator-bm-model", "data")]
+    Output('dist-curve', 'figure'),
+    Output('roc-curve', 'figure'),
+    Output('pr-curve', 'figure'),
+    Output('metrics', 'children'),
+    Input('threshold', 'value'),
+    State('validator-input-trigger', "data"),
+    State('validator-input-file', 'data'),
+    State("validator-bm-model", "data"),
 )
-def generate_performance_metrics(threshold_bm, threshold_re, trigger, input_path, rep_path, bm_path):
-    print("Generating performance metrics.")
+def bm_performance_metrics(threshold_bm, trigger, input_path, bm_path):
     if trigger:
-        with open(f'././{input_path}', 'rb') as f:
-            data = pickle.load(f)
-        # Benchmark Output
-        bm_test_data = data['bm_other_data']['Test']
+        print("Generating benchmark performance metrics.")
+        try:
+            with open(f'././{input_path}', 'rb') as f:
+                data = pickle.load(f)
+            # Benchmark Output
+            bm_test_data = data['bm_other_data']['Test']
 
-        with open(f'././{bm_path}', 'rb') as f:
-            bm_model = pickle.load(f)
+            with open(f'././{bm_path}', 'rb') as f:
+                bm_model = pickle.load(f)
 
-        pme_obj = pme.PerformanceEvaluator(bm_test_data['pred_proba'],
-                                           float(threshold_bm),
-                                           bm_test_data['y'],
-                                           bm_test_data['processed_X'],
-                                           bm_model)
+            pme_obj = pme.PerformanceEvaluator(bm_test_data['pred_proba'],
+                                               float(threshold_bm),
+                                               bm_test_data['y'],
+                                               bm_test_data['processed_X'],
+                                               bm_model)
 
-        dist_bm = pme_obj.get_dist_plot()
-        roc_bm = pme_obj.get_roc_curve()
-        pr_bm = pme_obj.get_pr_curve()
-        metrics = pme_obj.cal_metrics()
+            dist_bm = pme_obj.get_dist_plot()
+            roc_bm = pme_obj.get_roc_curve()
+            pr_bm = pme_obj.get_pr_curve()
+            metrics = pme_obj.cal_metrics()
 
-        metrics_comp = html.Div([
-            html.H6(f'Accuracy {metrics["accuracy"]}'),
-            html.H6(f'Precision {metrics["precision"]}'),
-            html.H6(f'Recall {metrics["recall"]}'),
-            html.H6(f'F1-Score {metrics["f1_score"]}'),
-        ])
+            metrics_comp = html.Div([
+                html.H6(f'Accuracy {metrics["accuracy"]}'),
+                html.H6(f'Precision {metrics["precision"]}'),
+                html.H6(f'Recall {metrics["recall"]}'),
+                html.H6(f'F1-Score {metrics["f1_score"]}'),
+            ])
+            return dist_bm, roc_bm, pr_bm, metrics_comp
+        except Exception as e:
+            print(e)
+            return None, None, None, None
+    return None, None, None, None
 
-        # Replication Output
-        re_test_data = data['re_other_data']['Test']
 
-        with open(f'././{rep_path}', 'rb') as f:
-            re_model = pickle.load(f)
-        pme_obj = pme.PerformanceEvaluator(re_test_data['pred_proba'],
-                                           float(threshold_re),
-                                           re_test_data['y'],
-                                           re_test_data['processed_X'],
-                                           re_model)
+@app.callback(
+    Output('dist-curve-re', 'figure'),
+    Output('roc-curve-re', 'figure'),
+    Output('pr-curve-re', 'figure'),
+    Output('metrics-re', 'children'),
+    Input('threshold-re', 'value'),
+    Input('validator-input-trigger', 'data'),
+    Input('validator-input-file', 'data'),
+    Input("validator-rep-model", "data"),
+)
+def re_performance_metrics(threshold_re, trigger, input_path, rep_path):
+    if trigger:
+        print("Generating replication performance metrics.")
+        try:
+            with open(f'././{input_path}', 'rb') as f:
+                data = pickle.load(f)
+            # Replication Output
+            re_test_data = data['re_other_data']['Test']
 
-        dist_re = pme_obj.get_dist_plot()
-        roc_re = pme_obj.get_roc_curve()
-        pr_re = pme_obj.get_pr_curve()
-        metrics_re = pme_obj.cal_metrics()
+            with open(f'././{rep_path}', 'rb') as f:
+                re_model = pickle.load(f)
 
-        metrics_comp_re = html.Div([
-            html.H6(f'Accuracy {metrics_re["accuracy"]}'),
-            html.H6(f'Precision {metrics_re["precision"]}'),
-            html.H6(f'Recall {metrics_re["recall"]}'),
-            html.H6(f'F1-Score {metrics_re["f1_score"]}'),
-        ])
-        return dist_bm, roc_bm, pr_bm, metrics_comp, dist_re, roc_re, pr_re, metrics_comp_re
+            pme_obj = pme.PerformanceEvaluator(re_test_data['pred_proba'],
+                                               float(threshold_re),
+                                               re_test_data['y'],
+                                               re_test_data['processed_X'],
+                                               re_model)
+
+            dist_re = pme_obj.get_dist_plot()
+            roc_re = pme_obj.get_roc_curve()
+            pr_re = pme_obj.get_pr_curve()
+            metrics_re = pme_obj.cal_metrics()
+
+            metrics_comp_re = html.Div([
+                html.H6(f'Accuracy {metrics_re["accuracy"]}'),
+                html.H6(f'Precision {metrics_re["precision"]}'),
+                html.H6(f'Recall {metrics_re["recall"]}'),
+                html.H6(f'F1-Score {metrics_re["f1_score"]}'),
+            ])
+            return dist_re, roc_re, pr_re, metrics_comp_re
+        except Exception as e:
+            print(e)
+            return None, None, None, None
+    return None, None, None, None
 
 # Update benchmark threshold value
 
@@ -136,66 +168,95 @@ def update_threshold_text_bm(value):
 def update_threshold_text_re(value):
     return 'Adjust the threshold here: %.2f' % float(value)
 
-# Output PSI and KSI
+# Output PSI and KS
 
 
 @app.callback(
-    Output("psi-table", "data"), Output("psi-score",
-                                        "text"), Output('psi-table', 'columns'), Output("ks-tests", "children"),
-    Output("psi-table-re", "data"), Output("psi-score-re",
-                                           "text"), Output('psi-table-re', 'columns'), Output("ks-tests-re", "children"),
+    Output("psi-table", "data"),
+    Output("psi-score", "text"),
+    Output('psi-table', 'columns'),
+    Output("ks-tests", "children"),
     Input("psi-num-of-bins", "value"),
     Input('validator-input-trigger', 'data'),
-    Input('validator-input-file', 'data')
+    Input('validator-input-file', 'data'),
 )
-def output_psi_ks_table(num_of_bins, trigger, input_path):
+def bm_psi_ks(num_of_bins, trigger, input_path):
     if trigger:
-        with open(f'././{input_path}', 'rb') as f:
-            data = pickle.load(f)
-        bm_train_data = data['bm_train_data']
-        bm_test_data = data['bm_other_data']['Test']
-        re_train_data = data['re_train_data']
-        re_test_data = data['re_other_data']['Test']
-        # Auto-Benchmarking
-        my_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(bm_train_data,
-                                                                             bm_test_data)
-        psi_score, psi_df = my_class.calculate_psi(num_of_bins)
-        psi_score_text = 'PSI Score: ' + str(psi_score)
-        psi_df.columns = psi_df.columns.astype(str)
-        psi_df = psi_df.reset_index()
-        psi_df['index'] = psi_df['index'].astype(str)
-        psi_df.rename(columns={'index': 'ranges'}, inplace=True)
+        print("Generating benchmark PSI.")
+        try:
+            with open(f'././{input_path}', 'rb') as f:
+                data = pickle.load(f)
+            bm_train_data = data['bm_train_data']
+            bm_test_data = data['bm_other_data']['Test']
 
-        ks_dict = my_class.kstest()
-        ks_output = [html.H3('Kolmogorov–Smirnov statistic'),
-                     html.H6(
-                         'Quantifies a distance of the distribution within the training sample and testing sample, or between the two.'),
-                     html.H6('KS Train: ' + str(ks_dict['Train']), style={
-                             'textAlign': 'left', 'fontWeight': 'bold'}),
-                     html.H6('KS Test: ' + str(ks_dict['Test']), style={
-                             'textAlign': 'left', 'fontWeight': 'bold'}),
-                     html.H6('KS Train & Test: ' + str(ks_dict['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
-        # Model Replication
-        my_class_re = statistical_metrics_evaluator.StatisticalMetricsEvaluator(re_train_data,
-                                                                                re_test_data)
-        psi_score_re, psi_df_re = my_class_re.calculate_psi(num_of_bins)
-        psi_score_text_re = 'PSI Score: ' + str(psi_score_re)
-        psi_df_re.columns = psi_df_re.columns.astype(str)
-        psi_df_re = psi_df_re.reset_index()
-        psi_df_re['index'] = psi_df_re['index'].astype(str)
-        psi_df_re.rename(columns={'index': 'ranges'}, inplace=True)
+            # Auto-Benchmarking
+            my_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(bm_train_data,
+                                                                                 bm_test_data)
+            psi_score, psi_df = my_class.calculate_psi(num_of_bins)
+            psi_score_text = 'PSI Score: ' + str(psi_score)
+            psi_df.columns = psi_df.columns.astype(str)
+            psi_df = psi_df.reset_index()
+            psi_df['index'] = psi_df['index'].astype(str)
+            psi_df.rename(columns={'index': 'ranges'}, inplace=True)
 
-        ks_dict_re = my_class_re.kstest()
-        ks_output_re = [html.H3('Kolmogorov–Smirnov statistic'),
-                        html.H6(
-                            'Quantifies a distance of the distribution within the training sample and testing sample, or between the two.'),
-                        html.H6('KS Train: ' + str(ks_dict_re['Train']), style={
-                                'textAlign': 'left', 'fontWeight': 'bold'}),
-                        html.H6('KS Test: ' + str(ks_dict_re['Test']), style={
-                                'textAlign': 'left', 'fontWeight': 'bold'}),
-                        html.H6('KS Train & Test: ' + str(ks_dict_re['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
-        return psi_df.to_dict('records'), psi_score_text, [{"name": col, "id": col} for col in psi_df.columns], ks_output, psi_df_re.to_dict('records'), psi_score_text_re, [{"name": col, "id": col} for col in psi_df_re.columns], ks_output_re
+            ks_dict = my_class.kstest()
+            ks_output = [html.H3('Kolmogorov–Smirnov statistic'),
+                         html.H6(
+                'Quantifies a distance of the distribution within the training sample and testing sample, or between the two.'),
+                html.H6('KS Train: ' + str(ks_dict['Train']), style={
+                    'textAlign': 'left', 'fontWeight': 'bold'}),
+                html.H6('KS Test: ' + str(ks_dict['Test']), style={
+                    'textAlign': 'left', 'fontWeight': 'bold'}),
+                html.H6('KS Train & Test: ' + str(ks_dict['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
+            return psi_df.to_dict('records'), psi_score_text, [{"name": col, "id": col} for col in psi_df.columns], ks_output
+        except Exception as e:
+            print(e)
+            return None, None, None, None
+    return None, None, None, None
 
+
+@app.callback(
+    Output("psi-table-re", "data"),
+    Output("psi-score-re", "text"),
+    Output('psi-table-re', 'columns'),
+    Output("ks-tests-re", "children"),
+    Input("psi-num-of-bins-re", "value"),
+    Input('validator-input-trigger', 'data'),
+    Input('validator-input-file', 'data'),
+)
+def re_psi_ks(num_of_bins, trigger, input_path):
+    if trigger:
+        print("Generating replication PSI.")
+        try:
+            with open(f'././{input_path}', 'rb') as f:
+                data = pickle.load(f)
+            re_train_data = data['re_train_data']
+            re_test_data = data['re_other_data']['Test']
+
+            # Model Replication
+            my_class_re = statistical_metrics_evaluator.StatisticalMetricsEvaluator(re_train_data,
+                                                                                    re_test_data)
+            psi_score_re, psi_df_re = my_class_re.calculate_psi(num_of_bins)
+            psi_score_text_re = 'PSI Score: ' + str(psi_score_re)
+            psi_df_re.columns = psi_df_re.columns.astype(str)
+            psi_df_re = psi_df_re.reset_index()
+            psi_df_re['index'] = psi_df_re['index'].astype(str)
+            psi_df_re.rename(columns={'index': 'ranges'}, inplace=True)
+
+            ks_dict_re = my_class_re.kstest()
+            ks_output_re = [html.H3('Kolmogorov–Smirnov statistic'),
+                            html.H6(
+                                'Quantifies a distance of the distribution within the training sample and testing sample, or between the two.'),
+                            html.H6('KS Train: ' + str(ks_dict_re['Train']), style={
+                                    'textAlign': 'left', 'fontWeight': 'bold'}),
+                            html.H6('KS Test: ' + str(ks_dict_re['Test']), style={
+                                    'textAlign': 'left', 'fontWeight': 'bold'}),
+                            html.H6('KS Train & Test: ' + str(ks_dict_re['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
+            return psi_df_re.to_dict('records'), psi_score_text_re, [{"name": col, "id": col} for col in psi_df_re.columns], ks_output_re
+        except Exception as e:
+            print(e)
+            return None, None, None, None
+    return None, None, None, None
 # Update gini features selection based on train dataset for both models
 
 
@@ -203,7 +264,7 @@ def output_psi_ks_table(num_of_bins, trigger, input_path):
     Output("gini-feature-multi-dynamic-dropdown",
            "options"), Output("gini-feature-multi-dynamic-dropdown-re", "options"),
     Input('validator-input-trigger', 'data'),
-    Input('validator-input-file', 'data')
+    Input('validator-input-file', 'data'),
 )
 def update_gini(trigger, input_path):
     if trigger:
@@ -221,7 +282,7 @@ def update_gini(trigger, input_path):
     Output("gini-viz", "children"),
     Input("gini-feature-multi-dynamic-dropdown", "value"),
     Input('validator-input-trigger', 'data'),
-    Input('validator-input-file', 'data')
+    Input('validator-input-file', 'data'),
 )
 def update_bm_gini(ft_name_list: list[str], trigger, input_path):
     if trigger:
@@ -248,7 +309,7 @@ def update_bm_gini(ft_name_list: list[str], trigger, input_path):
     Output("gini-viz-re", "children"),
     Input("gini-feature-multi-dynamic-dropdown-re", "value"),
     Input('validator-input-trigger', 'data'),
-    Input('validator-input-file', 'data')
+    Input('validator-input-file', 'data'),
 )
 def update_re_gini(ft_name_list: list[str], trigger, input_path):
     if trigger:
@@ -293,7 +354,7 @@ def update_gini_bm(trigger, input_path):
     Input("csi-feature-multi-dynamic-dropdown", "value"),
     Input("csi-num-of-bins", "value"),
     Input('validator-input-trigger', 'data'),
-    Input('validator-input-file', 'data')
+    Input('validator-input-file', 'data'),
 )
 def update_csi_metrics_bm(feature_list, num_of_bins, trigger, input_path):
     if trigger:
@@ -326,6 +387,7 @@ def update_csi_metrics_bm(feature_list, num_of_bins, trigger, input_path):
                                                      sort_action='native'))
         return csi_children
 
+
 # Update the CSI when user select features
 
 
@@ -334,7 +396,7 @@ def update_csi_metrics_bm(feature_list, num_of_bins, trigger, input_path):
     Input("csi-feature-multi-dynamic-dropdown-re", "value"),
     Input("csi-num-of-bins-re", "value"),
     Input('validator-input-trigger', 'data'),
-    Input('validator-input-file', 'data')
+    Input('validator-input-file', 'data'),
 )
 def update_csi_metrics_re(feature_list, num_of_bins, trigger, input_path):
     if trigger:
@@ -367,50 +429,61 @@ def update_csi_metrics_re(feature_list, num_of_bins, trigger, input_path):
                                                      sort_action='native'))
         return csi_children
 
-# Output transparency metrics for both models
+# Output transparency metrics
 
 
 @app.callback(
-    Output("global-lime", "src"), Output("local-lime",
-                                         "src"), Output("global-shap", "src"), Output("local-shap", "src"),
-    Output("global-lime-re", "src"), Output("local-lime-re",
-                                            "src"), Output("global-shap-re", "src"), Output("local-shap-re", "src"),
+    Output("global-lime", "src"),
+    Output("global-shap", "src"),
     Input('validator-input-trigger', 'data'),
-    Input('validator-input-file', 'data'),
-    Input("validator-rep-model", "data"),
-    Input("validator-bm-model", "data")
+    State('validator-input-file', 'data'),
+    State("validator-bm-model", "data"),
 )
-def output_transparency_plots(trigger, input_path, rep_path, bm_path):
+def bm_transparency_plots(trigger, input_path, bm_path):
     if trigger:
+        print("Generate benchmark transparency plots.")
         with open(f'././{input_path}', 'rb') as f:
             data = pickle.load(f)
         with open(f'././{bm_path}', 'rb') as f:
             bm_model = pickle.load(f)
+
+        bm_train_data = data['bm_train_data']
+        try:
+            evaluator = transparency_metrics_evaluator.TransparencyMetricsEvaluator(
+                bm_model, bm_train_data['processed_X'].sample(100))  # Too large, hence we take a sample
+            local_lime_fig, global_lime_fig, local_text_lime, global_text_lime = evaluator.lime_interpretability()
+            global_lime_fig.savefig(
+                '././auto_ml_validation/app/assets/images/global_lime_bm.png', bbox_inches='tight')
+
+            local_shap_fig, global_shap_fig, local_text_shap, global_text_shap = evaluator.shap_interpretability()
+
+            global_shap_fig.savefig(
+                '././auto_ml_validation/app/assets/images/global_shap_bm.png', bbox_inches='tight')
+            global_lime_bm = app.get_asset_url("images/global_lime_bm.png")
+            global_shap_bm = app.get_asset_url("images/global_shap_bm.png")
+            return global_lime_bm, global_shap_bm
+        except Exception as e:
+            print(e)
+            return "", ""
+    return "", ""
+
+
+@app.callback(
+    Output("global-lime-re", "src"),
+    Output("global-shap-re", "src"),
+    Input('validator-input-trigger', 'data'),
+    Input('validator-input-file', 'data'),
+    Input("validator-rep-model", "data"),
+)
+def re_transparency_plots(trigger, input_path, rep_path):
+    if trigger:
+        print("Generate replication transparency plots.")
+        with open(f'././{input_path}', 'rb') as f:
+            data = pickle.load(f)
         with open(f'././{rep_path}', 'rb') as f:
             re_model = pickle.load(f)
 
-        bm_train_data = data['bm_train_data']
         re_train_data = data['re_train_data']
-
-        evaluator = transparency_metrics_evaluator.TransparencyMetricsEvaluator(
-            bm_model, bm_train_data['processed_X'].sample(100))  # Too large, hence we take a sample
-
-        local_lime_fig, global_lime_fig, local_text_lime, global_text_lime = evaluator.lime_interpretability()
-        global_lime_fig.savefig(
-            '././auto_ml_validation/app/assets/images/global_lime_bm.png', bbox_inches='tight')
-        local_lime_fig.savefig(
-            '././auto_ml_validation/app/assets/images/local_lime_bm.png', bbox_inches='tight')
-
-        local_shap_fig, global_shap_fig, local_text_shap, global_text_shap = evaluator.shap_interpretability()
-        local_shap_fig.savefig(
-            '././auto_ml_validation/app/assets/images/local_shap_bm.png',  bbox_inches='tight')
-        global_shap_fig.savefig(
-            '././auto_ml_validation/app/assets/images/global_shap_bm.png', bbox_inches='tight')
-        global_lime_bm = app.get_asset_url("images/global_lime_bm.png")
-        local_lime_bm = app.get_asset_url("images/local_lime_bm.png")
-        global_shap_bm = app.get_asset_url("images/global_shap_bm.png")
-        local_shap_bm = app.get_asset_url("images/local_shap_bm.png")
-
         try:
             evaluator = transparency_metrics_evaluator.TransparencyMetricsEvaluator(
                 re_model, re_train_data['processed_X'].sample(100))
@@ -418,24 +491,18 @@ def output_transparency_plots(trigger, input_path, rep_path, bm_path):
             local_lime_fig, global_lime_fig, local_text_lime, global_text_lime = evaluator.lime_interpretability()
             global_lime_fig.savefig(
                 '././auto_ml_validation/app/assets/images/global_lime_re.png', bbox_inches='tight')
-            local_lime_fig.savefig(
-                '././auto_ml_validation/app/assets/images/local_lime_re.png', bbox_inches='tight')
+
             local_shap_fig, global_shap_fig, local_text_shap, global_text_shap = evaluator.shap_interpretability()
-            local_shap_fig.savefig(
-                '././auto_ml_validation/app/assets/images/local_shap_re.png',  bbox_inches='tight')
+
             global_shap_fig.savefig(
                 '././auto_ml_validation/app/assets/images/global_shap_re.png', bbox_inches='tight')
             global_lime_re = app.get_asset_url("images/global_lime_re.png")
-            local_lime_re = app.get_asset_url("images/local_lime_re.png")
-            global_shap_re = app.get_asset_url("images/global_shap_re.png")
-            local_shap_re = app.get_asset_url("images/local_shap_re.png")
-        except Exception as e:
-            global_lime_re = app.get_asset_url("images/global_lime_re.png")
-            local_lime_re = app.get_asset_url("images/local_lime_re.png")
-            global_shap_re = app.get_asset_url("images/global_shap_re.png")
-            local_shap_re = app.get_asset_url("images/local_shap_re.png")
 
-        return global_lime_bm, local_lime_bm, global_shap_bm, local_shap_bm, global_lime_re, local_lime_re, global_shap_re, local_shap_re
+            global_shap_re = app.get_asset_url("images/global_shap_re.png")
+        except Exception as e:
+            print(e)
+            return "", ""
+        return global_lime_re, global_shap_re
 
 # Run the evaluation pipeline and generate word doc report
 

@@ -22,7 +22,8 @@ content = html.Div(id='page-content',
 @app.callback(Output("page-content", "children"),
               [Input("url", "pathname")])
 def display_page(pathname):
-    if pathname == "/home":
+    print(pathname)
+    if pathname == "/home" or pathname == "/":
         return home_callbacks.home_layout
     elif pathname == "/results":
         return results_callbacks.results_layout
@@ -34,6 +35,7 @@ def display_page(pathname):
 app.layout = html.Div([
     navbar,
     content,
+    dcc.Location(id='url', refresh=False),
     # For data sharing between pages
     # Boolean to act as a trigger for result page callbacks
     dcc.Store(id='validator-input-trigger',
@@ -47,4 +49,4 @@ app.layout = html.Div([
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)  # TODO
+    app.run_server(debug=True, dev_tools_hot_reload=False)  # TODO
