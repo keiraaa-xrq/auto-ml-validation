@@ -36,10 +36,10 @@ def project_field():
                 dbc.Input(id="project-name",
                           placeholder="Project Name", type="text")
             ]),
-            width={"size": 3, "offset": 4},
+            width={"size": 4, "offset": 4},
             className="text-center"
-        )
-    ]),
+        ),
+    ], align='center'),
         html.Br(),
         html.Div(id="validation-message",
                  style={"color": "red", 'textAlign': 'center'}),

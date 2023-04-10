@@ -31,8 +31,6 @@ home_layout = html.Div([
     form,
     html.Div(children=[rep_layout, auto_layout,
              submit_button], id='content_div'),
-    # Dictionary of Project Config {project name: value, algorithm: value}
-    dcc.Store(id='store-project', data={}, storage_type='memory'),
     # Dictionary of Replicating Model Data {Hyperparamaters: Value, Train Dataset: Value, Test Dataset: Value, Other Dataset: Value, Target: Value, Categorical Variable: Value}
     dcc.Store(id='store-rep-data', data={}, storage_type='session'),
     # Dictionary of AutoBenchmarking Model Data {Train Dataset: Value, Test Dataset: Value, Other Dataset: Value, Metric: Value, Auto Feat Selection: Yes/No}
@@ -50,7 +48,12 @@ home_layout = html.Div([
 def save_proj_dat(project_name, algo_value):
     if project_name == None:
         project_name = ""
-    project_config = {'Project Name': project_name, 'Algorithm': algo_value}
+    date = datetime.today().strftime('%Y-%m-%d')
+    project_config = {
+        'Project Name': project_name,
+        'Algorithm': algo_value,
+        'Date': date,
+    }
     return [json.dumps(project_config)]
 
 # Update File Paths in input text box for Replicating Model
@@ -277,7 +280,6 @@ def parse_data(content, filename):
     State("store-project", "data"),
     State("store-rep-data", "data"),
     State("store-auto-data", "data"),
-    # State('url', 'pathname'),
     prevent_initial_call=True
 )
 def modelling_process(loading, proj, rep_data, auto_data):
@@ -309,7 +311,7 @@ def modelling_process(loading, proj, rep_data, auto_data):
                                                                            auto_train, auto_test, auto_other, metric, feat_sel)
             return '/results', "", True, output_path, rep_path, bm_path
         except Exception as e:
-            return '/home', f"Model Building has failed. Error: {e}. Please try again. ", False, None, None
+            return '/home', f"Model Building has failed. Error: {e}. Please try again. ", False, None, None, None
 
     # return current_pathname, "", False, None, None, None
 

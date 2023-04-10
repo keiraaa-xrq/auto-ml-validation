@@ -37,6 +37,8 @@ app.layout = html.Div([
     content,
     dcc.Location(id='url', refresh=False),
     # For data sharing between pages
+    # Dictionary of Project Config {project name: value, algorithm: value}
+    dcc.Store(id='store-project', data={}, storage_type='session'),
     # Boolean to act as a trigger for result page callbacks
     dcc.Store(id='validator-input-trigger',
               data=False, storage_type='session'),
@@ -49,4 +51,4 @@ app.layout = html.Div([
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, dev_tools_hot_reload=False)  # TODO
+    app.run_server(debug=False)
