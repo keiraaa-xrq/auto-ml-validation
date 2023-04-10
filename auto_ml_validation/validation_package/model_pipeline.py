@@ -1,4 +1,5 @@
 from typing import *
+import os
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -41,18 +42,20 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
     """
     # Variables and Logging
     DATE = datetime.today().strftime('%Y-%m-%d')
+    os.makedirs(f'./models', exist_ok=True)
     rep_save_path = f'models/{project_name}_{algorithm}_rep_{DATE}.pkl'
     auto_save_path = f'models/{project_name}_auto_{DATE}.pkl'
     output_dict = bm_train_data = bm_other_data = re_train_data = re_other_data = {}
-    
+
     logger = setup_main_logger(project_name)
-    
+
     try:
         log_info(logger, 'Replicating the model...')
         re_train_data, re_other_data = run_model_replication(
             auto_train, auto_test, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, rep_save_path)
     except Exception as e:
-        error_message = "Returning to homepage... An error occurred while replicating the model: %s." % str(e)
+        error_message = "Returning to homepage... An error occurred while replicating the model: %s." % str(
+            e)
         log_error(logger, error_message)
         raise e
 
@@ -63,7 +66,8 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
         bm_train_data, bm_other_data = run_auto_bmk(
             auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs=-1, mode='parallel', save_path=auto_save_path)
     except Exception as e:
-        error_message = "Returning to homepage... An error occurred while creating the benchmark model: %s. " % str(e)
+        error_message = "Returning to homepage... An error occurred while creating the benchmark model: %s. " % str(
+            e)
         log_error(logger, error_message)
         raise e
 
@@ -72,10 +76,11 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
     log_info(logger, 'Almost done...')
 
     # Save Output
-    with open(f'data/validator_input/{project_name}_{algorithm}_{DATE}_data.pkl', 'wb') as f:
+    output_path = f'data/validator_input/{project_name}_{algorithm}_{DATE}_data.pkl'
+    with open(output_path, 'wb') as f:
         pickle.dump(output_dict, f)
 
-    return output_dict, f'{project_name}_{algorithm}_{DATE}_data.pkl'
+    return output_dict, output_path, rep_save_path, auto_save_path
 
 
 def run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test, rep_other, target, algorithm, hyperparams, metric, save_path):
@@ -90,10 +95,12 @@ def run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test
     rep_X_train, rep_y_train = split_x_y(rep_train, target)
 
     rep_others_X_y = [(split_x_y(each, target)) for each in rep_others]
-    rep_model, valid_threshold = replicate(rep_X_train, rep_y_train, *rep_others_X_y[0], algorithm, hyperparams, metric, save=True, save_path=save_path)
+    rep_model, valid_threshold = replicate(
+        rep_X_train, rep_y_train, *rep_others_X_y[0], algorithm, hyperparams, metric, save=True, save_path=save_path)
     re_train_proba = rep_model.predict_proba(rep_X_train)
 
-    re_train_data = {'raw_X': auto_train.drop(target, axis=1)[sorted(auto_train.drop(target, axis=1).columns)], 'processed_X': rep_X_train, 'y': rep_y_train, 'pred_proba': re_train_proba}
+    re_train_data = {'raw_X': auto_train.drop(target, axis=1)[sorted(auto_train.drop(
+        target, axis=1).columns)], 'processed_X': rep_X_train, 'y': rep_y_train, 'pred_proba': re_train_proba}
     re_other_data = {}
     for i, (X, y) in enumerate(rep_others_X_y):
         key = "Test" if i == 0 else f"Other{i}"
@@ -102,7 +109,8 @@ def run_model_replication(auto_train, auto_test, auto_other, rep_train, rep_test
         re_other_data[key]['raw_X'] = raw_X[sorted(raw_X.columns)]
         re_other_data[key]['processed_X'] = rep_others_X_y[i][0]
         re_other_data[key]['y'] = [tup[1] for tup in rep_others_X_y][i]
-        re_other_data[key]['pred_proba'] = rep_model.predict_proba(rep_others_X_y[i][0])
+        re_other_data[key]['pred_proba'] = rep_model.predict_proba(
+            rep_others_X_y[i][0])
 
     return re_train_data, re_other_data
 
@@ -115,36 +123,40 @@ def run_auto_bmk(auto_train, auto_test, auto_other, target, cat_cols, metric, fe
     """
     # Auto-Benchmarking
     auto_others_raw = [auto_test] + auto_other
-    full_auto_X_train, full_auto_y_train, auto_others, col_mapping = process_data(auto_train, auto_others_raw, target, cat_cols)
+    auto_X_train, auto_y_train, auto_others, col_mapping = process_data(
+        auto_train, auto_others_raw, target, cat_cols)
 
-    # Split to Train and Validation sets for building auto benchmark, here we split the train set and treat test and others set as out of sample
-    auto_X_train, auto_X_val, auto_y_train, auto_y_val = split_train_val(full_auto_X_train, full_auto_y_train)
-
-    auto_X_test = auto_others[0][0] # Retrieve test set X features
-    auto_y_test = auto_others[0][1] # Retrieve test set y feature
+    auto_X_test = auto_others[0][0]  # Retrieve test set X features
+    auto_y_test = auto_others[0][1]  # Retrieve test set y feature
     benchmark_model, benchmark_output = auto_benchmark(auto_X_train, auto_y_train,
                                                        auto_X_test, auto_y_test, metric, feat_sel_bool,
                                                        n_jobs=n_jobs, mode=mode, save=True, save_path=save_path, verbose=True)
 
     # To inverse OHE, col_mapping dictionary (k, v) where k is OHE processed column and v is original column
     feats_selected = benchmark_output[benchmark_model.name]['features_selected']
-    feats_selected_mapped = set([col_mapping.get(col, col) for col in feats_selected])
+    feats_selected_mapped = set([col_mapping.get(col, col)
+                                for col in feats_selected])
 
-    bm_train_proba = benchmark_model.predict_proba(full_auto_X_train[feats_selected])
-    auto_train_upper = auto_train[feats_selected_mapped].rename(columns=str.upper)
-    best_auto_X_train = full_auto_X_train[feats_selected]
-    bm_train_data = {'raw_X': auto_train_upper[sorted(auto_train_upper.columns)], 'processed_X': best_auto_X_train, 'y': full_auto_y_train, 'pred_proba': bm_train_proba}
-    
+    bm_train_proba = benchmark_model.predict_proba(
+        auto_X_train[feats_selected])
+    auto_train_upper = auto_train[feats_selected_mapped].rename(
+        columns=str.upper)
+    best_auto_X_train = auto_X_train[feats_selected]
+    bm_train_data = {'raw_X': auto_train_upper[sorted(
+        auto_train_upper.columns)], 'processed_X': best_auto_X_train, 'y': auto_y_train, 'pred_proba': bm_train_proba}
+
     # To predict for test and all other datasets
     bm_other_data = {}
     for i, (X, y) in enumerate(auto_others):
         key = "Test" if i == 0 else f"Other{i}"
         bm_other_data[key] = {}
-        raw_X = auto_others_raw[i][feats_selected_mapped].rename(columns=str.upper)
+        raw_X = auto_others_raw[i][feats_selected_mapped].rename(
+            columns=str.upper)
         bm_other_data[key]['raw_X'] = raw_X[sorted(raw_X.columns)]
         bm_other_data[key]['processed_X'] = auto_others[i][0][feats_selected]
         bm_other_data[key]['y'] = auto_others[i][1]
 
-        bm_other_data[key]['pred_proba'] = benchmark_model.predict_proba(auto_others[i][0][feats_selected]) 
+        bm_other_data[key]['pred_proba'] = benchmark_model.predict_proba(
+            auto_others[i][0][feats_selected])
 
     return bm_train_data, bm_other_data

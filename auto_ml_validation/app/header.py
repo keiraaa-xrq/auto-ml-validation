@@ -3,14 +3,17 @@
 from dash import html
 import dash_bootstrap_components as dbc
 
+
 def NavBar(app):
     navbar = dbc.Navbar(
         dbc.Container(
             [
                 dbc.Row(
                     [
-                        dbc.Col(html.Img(src=app.get_asset_url("images/MariBank.png"), height="85px", width = '180px')),
-                        dbc.Col(html.H2(app.title, style={"color": "#ec6b12", "font-weight":"bold"}, className="navbar-brand")),
+                        dbc.Col(html.Img(src=app.get_asset_url(
+                            "images/MariBank.png"))),
+                        dbc.Col(html.H2(app.title, style={
+                                "color": "#ec6b12", "font-weight": "bold"}, className="navbar-brand")),
                     ],
                     align="center"
                 )
@@ -26,5 +29,5 @@ def NavBar(app):
             "height": "10vh",
         }
     )
-    
+
     return navbar

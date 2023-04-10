@@ -10,16 +10,17 @@ navbar = header.NavBar(app)
 
 
 ########################## Body ##########################
-content = html.Div(id='page-content', 
-                   # children=[results_callbacks.results_layout], 
-                   children=[home_callbacks.home_layout], 
+content = html.Div(id='page-content',
+                   # children=[results_callbacks.results_layout],
+                   children=[home_callbacks.home_layout],
                    )
 
 ########################## Callback ##########################
 # Callback to show home page when the app is loaded
+
+
 @app.callback(Output("page-content", "children"),
               [Input("url", "pathname")])
-
 def display_page(pathname):
     if pathname == "/home":
         return home_callbacks.home_layout
@@ -30,13 +31,20 @@ def display_page(pathname):
 
 
 ########################## Layout ##########################
-app.layout = html.Div([navbar,
-                       content,
-                       # For data sharing between pages
-                       dcc.Store(id='validator-input-trigger', data=False, storage_type = 'session'), # Boolean to act as a trigger for result page callbacks
-                       dcc.Store(id='validator-input-file', data = '', storage_type ='session'), # File name for convenient lookup
-                       ])
+app.layout = html.Div([
+    navbar,
+    content,
+    # For data sharing between pages
+    # Boolean to act as a trigger for result page callbacks
+    dcc.Store(id='validator-input-trigger',
+              data=False, storage_type='session'),
+    # File name for convenient lookup
+    dcc.Store(id='validator-input-file',
+              data='', storage_type='session'),
+    dcc.Store(id='validator-rep-model', data='', storage_type='session'),
+    dcc.Store(id='validator-bm-model', data='', storage_type='session'),
+])
 
 
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)  # TODO

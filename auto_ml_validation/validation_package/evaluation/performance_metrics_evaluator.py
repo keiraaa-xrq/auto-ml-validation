@@ -5,8 +5,11 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objs as go
 import scikitplot as skp
+import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from sklearn.base import BaseEstimator
+
+plt.switch_backend('Agg')
 
 
 class PerformanceEvaluator:
@@ -52,12 +55,12 @@ class PerformanceEvaluator:
         return ConfusionMatrixDisplay.from_predictions(self.y_true, self.y_pred,
                                                        cmap='Oranges')
 
-    def cal_metrics(self) -> Dict[str,float]:
+    def cal_metrics(self) -> Dict[str, float]:
         return {
-            "accuracy": round(skl.accuracy_score(self.y_true, self.y_pred),3),
-            "precision": round(skl.precision_score(self.y_true, self.y_pred),3),
-            "recall": round(skl.recall_score(self.y_true, self.y_pred),3),
-            "f1_score": round(skl.f1_score(self.y_true, self.y_pred),3)
+            "accuracy": round(skl.accuracy_score(self.y_true, self.y_pred), 3),
+            "precision": round(skl.precision_score(self.y_true, self.y_pred), 3),
+            "recall": round(skl.recall_score(self.y_true, self.y_pred), 3),
+            "f1_score": round(skl.f1_score(self.y_true, self.y_pred), 3)
         }
 
     def get_roc_curve(self):
@@ -89,7 +92,7 @@ class PerformanceEvaluator:
             "ROCAUC": skl.roc_auc_score(self.y_true, self.positive_proba),
             "PRAUC": skl.auc(recall, precision)
         }
-    
+
     def get_lift_chart(self):
         return skp.metrics.plot_lift_curve(self.y_true, self.proba)
 

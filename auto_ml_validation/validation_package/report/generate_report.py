@@ -35,16 +35,24 @@ def generate_report(
     except:
         print("Error in generating model performance report")
 
+    doc.add_heading('Statistical Metrics', 1)
+    doc.add_paragraph("This section includes statistical metrics.")
     try:
-        doc.add_heading('Statistical Metrics', 1)
-        doc.add_paragraph("This section includes statistical metrics.")
-
         generate_psi_table(doc, m_result, bm_result)
+    except Exception as e:
+        print(f'Error in generating PSI: {e}')
+    try:
         generate_csi_table(doc, m_result)
-        generate_feature_gini_table(doc, m_result, bm_result)
+    except Exception as e:
+        print(f'Error in generating PSI: {e}')
+    try:
         generate_ks_table(doc, m_result, bm_result)
-    except:
-        print("Error in generating statistical metrics")
+    except Exception as e:
+        print(f'Error in generating KS test: ({e}')
+    try:
+        generate_feature_gini_table(doc, m_result, bm_result)
+    except Exception as e:
+        print(f'Error in generating GINI: {e}')
 
     try:
         doc.add_heading('Transparency Metrics', 1)
