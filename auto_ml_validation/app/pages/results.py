@@ -101,16 +101,29 @@ def bm_performance_metric_layout():
                     style={'display': 'flex', 'justify-content': 'center'}, children=[
                         dcc.Graph(id='dist-curve', figure={})]),
         html.H6('Shows the performance of the model at all classification thresholds. Higher AUC indicates a better model.'),
-        dcc.Loading(id="loading-roc-curve", type="circle",
-                    style={'display': 'flex', 'justify-content': 'center'}, children=[
-                        dcc.Graph(id='roc-curve', figure={}, style={'margin': 'auto'})]),
+        dcc.Loading(
+            id="loading-roc-curve",
+            type="circle",
+            style={'display': 'flex', 'justify-content': 'center'},
+            children=[
+                dcc.Graph(id='roc-curve', figure={}, style={'margin': 'auto'}),
+                html.P(id='rocauc-bm', children='',
+                       style={'font-weight': 'bold'})
+            ]),
         html.H6('Shows the tradeoff between precision and recall for different thresholds ' +
                 'in binary classification problems. A high area under the curve represents both ' +
                 'high recall and high precision, where high precision relates to a low false ' +
                 'positive rate, and high recall relates to a low false negative rate. '),
-        dcc.Loading(id="loading-pr-curve", type="circle",
-                    style={'display': 'flex', 'justify-content': 'center'}, children=[
-                        dcc.Graph(id='pr-curve', figure={}, style={'margin': 'auto'})]),
+        dcc.Loading(
+            id="loading-pr-curve",
+            type="circle",
+            style={'display': 'flex', 'justify-content': 'center'},
+            children=[
+                dcc.Graph(id='pr-curve', figure={}, style={'margin': 'auto'}),
+                html.P(id='prauc-bm', children='',
+                       style={'font-weight': 'bold'})
+            ]),
+        html.Br(),
         html.H6(id='threshold-text', children='Adjust the threshold here: 0.5',
                 style={'font-weight': 'bold'}),
         dcc.Input(id='threshold', type='range', value=0.5, min=0, max=1),
@@ -138,16 +151,30 @@ def re_performance_metric_layout():
                     style={'display': 'flex', 'justify-content': 'center'}, children=[
                         dcc.Graph(id='dist-curve-re', figure={})]),
         html.H6('Shows the performance of the model at all classification thresholds. Higher AUC indicates a better model.'),
-        dcc.Loading(id="loading-roc-curve-re", type="circle",
-                    style={'display': 'flex', 'justify-content': 'center'}, children=[
-                        dcc.Graph(id='roc-curve-re', figure={}, style={'margin': 'auto'})]),
+        dcc.Loading(
+            id="loading-roc-curve-re", type="circle",
+            style={'display': 'flex', 'justify-content': 'center'},
+            children=[
+                dcc.Graph(id='roc-curve-re', figure={},
+                          style={'margin': 'auto'}),
+                html.P(id='rocauc-re', children='',
+                       style={'font-weight': 'bold'})
+            ]),
         html.H6('Shows the tradeoff between precision and recall for different thresholds ' +
                 'in binary classification problems. A high area under the curve represents both ' +
                 'high recall and high precision, where high precision relates to a low false ' +
                 'positive rate, and high recall relates to a low false negative rate. '),
-        dcc.Loading(id="loading-pr-curve-re", type="circle",
-                    style={'display': 'flex', 'justify-content': 'center'}, children=[
-                        dcc.Graph(id='pr-curve-re', figure={}, style={"margin": "auto", "display": "flex", "justify-content": "center"})]),
+        dcc.Loading(
+            id="loading-pr-curve-re",
+            type="circle",
+            style={'display': 'flex', 'justify-content': 'center'},
+            children=[
+                dcc.Graph(id='pr-curve-re', figure={}, style={"margin": "auto",
+                          "display": "flex", "justify-content": "center"}),
+                html.P(id='prauc-re', children='',
+                       style={'font-weight': 'bold'})
+            ]),
+        html.Br(),
         html.H6(id='threshold-text-re', children='Adjust the threshold here: 0.5',
                 style={'font-weight': 'bold'}),
         dcc.Input(id='threshold-re', type='range', value=0.5, min=0, max=1),

@@ -51,6 +51,21 @@ results_layout = html.Div(
         html.Br(),
         html.Div([re_layout, bm_layout], style={
                  'display': 'flex',  'clear': 'right'}),
+        dcc.Store(id='re_dist_path_st', data=None, storage_type='session'),
+        dcc.Store(id='re_roc_path_st', data=None, storage_type='session'),
+        dcc.Store(id='re_pr_path_st', data=None, storage_type='session'),
+        dcc.Store(id='re_metrics_st', data=None, storage_type='session'),
+        dcc.Store(id='re_auc_st', data=None, storage_type='session'),
+        dcc.Store(id='re_psi_score_st', data=None, storage_type='session'),
+        dcc.Store(id='re_psi_df_st', data=None, storage_type='session'),
+        dcc.Store(id='re_ks_st', data=None, storage_type='session'),
+        dcc.Store(id='re_csi_dfs_st', data=None, storage_type='session'),
+        dcc.Store(id='re_csi_dicts_st', data=None, storage_type='session'),
+        dcc.Store(id='re_ft_gini_st', data=None, storage_type='session'),
+        dcc.Store(id='re_lime_path_st', data=None, storage_type='session'),
+        dcc.Store(id='re_shap_path_st', data=None, storage_type='session'),
+        dcc.Store(id='re_lime_lst_st', data=None, storage_type='session'),
+        dcc.Store(id='re_shap_lst_st', data=None, storage_type='session'),
     ]
 )
 # Callbacks
@@ -60,7 +75,9 @@ results_layout = html.Div(
 @app.callback(
     Output('dist-curve', 'figure'),
     Output('roc-curve', 'figure'),
+    Output('rocauc-bm', 'children'),
     Output('pr-curve', 'figure'),
+    Output('prauc-bm', 'children'),
     Output('metrics', 'children'),
     Input('threshold', 'value'),
     State('validator-input-trigger', "data"),
@@ -89,6 +106,9 @@ def bm_performance_metrics(threshold_bm, trigger, input_path, bm_path):
             roc_bm = pme_obj.get_roc_curve()
             pr_bm = pme_obj.get_pr_curve()
             metrics = pme_obj.cal_metrics()
+            auc = pme_obj.cal_auc()
+            rocauc = f"ROC-AUC: {round(auc['ROCAUC'], 3)}"
+            prauc = f"PR-AUC: {round(auc['PRAUC'], 3)}"
 
             metrics_comp = html.Div([
                 html.H6(f'Accuracy {metrics["accuracy"]}'),
@@ -96,18 +116,25 @@ def bm_performance_metrics(threshold_bm, trigger, input_path, bm_path):
                 html.H6(f'Recall {metrics["recall"]}'),
                 html.H6(f'F1-Score {metrics["f1_score"]}'),
             ])
-            return dist_bm, roc_bm, pr_bm, metrics_comp
+            return dist_bm, roc_bm, rocauc, pr_bm, prauc, metrics_comp
         except Exception as e:
             print(e)
-            return None, None, None, None
-    return None, None, None, None
+            return (None,)*6
+    return (None,)*6
 
 
 @app.callback(
     Output('dist-curve-re', 'figure'),
     Output('roc-curve-re', 'figure'),
+    Output('rocauc-re', 'children'),
     Output('pr-curve-re', 'figure'),
+    Output('prauc-re', 'children'),
     Output('metrics-re', 'children'),
+    Output('re_metrics_st', 'data'),
+    Output('re_dist_path_st', 'data'),
+    Output('re_roc_path_st', 'data'),
+    Output('re_pr_path_st', 'data'),
+    Output('re_auc_st', 'data'),
     Input('threshold-re', 'value'),
     Input('validator-input-trigger', 'data'),
     Input('validator-input-file', 'data'),
@@ -132,9 +159,18 @@ def re_performance_metrics(threshold_re, trigger, input_path, rep_path):
                                                re_model)
 
             dist_re = pme_obj.get_dist_plot()
+            dist_path = '././auto_ml_validation/app/assets/images/dist_re.png'
+            dist_re.write_image(dist_path)
             roc_re = pme_obj.get_roc_curve()
+            roc_path = '././auto_ml_validation/app/assets/images/roc_re.png'
+            roc_re.write_image(roc_path)
             pr_re = pme_obj.get_pr_curve()
+            pr_path = '././auto_ml_validation/app/assets/images/pr_re.png'
+            pr_re.write_image(pr_path)
             metrics_re = pme_obj.cal_metrics()
+            auc = pme_obj.cal_auc()
+            rocauc = f"ROC-AUC: {round(auc['ROCAUC'], 3)}"
+            prauc = f"PR-AUC: {round(auc['PRAUC'], 3)}"
 
             metrics_comp_re = html.Div([
                 html.H6(f'Accuracy {metrics_re["accuracy"]}'),
@@ -142,11 +178,11 @@ def re_performance_metrics(threshold_re, trigger, input_path, rep_path):
                 html.H6(f'Recall {metrics_re["recall"]}'),
                 html.H6(f'F1-Score {metrics_re["f1_score"]}'),
             ])
-            return dist_re, roc_re, pr_re, metrics_comp_re
+            return dist_re, roc_re, rocauc, pr_re, prauc, metrics_comp_re, metrics_re, dist_path, roc_path, pr_path, auc
         except Exception as e:
             print(e)
-            return None, None, None, None
-    return None, None, None, None
+            return (None,)*11
+    return (None,)*11
 
 # Update benchmark threshold value
 
@@ -173,7 +209,7 @@ def update_threshold_text_re(value):
 
 @app.callback(
     Output("psi-table", "data"),
-    Output("psi-score", "text"),
+    Output("psi-score", "children"),
     Output('psi-table', 'columns'),
     Output("ks-tests", "children"),
     Input("psi-num-of-bins", "value"),
@@ -193,7 +229,7 @@ def bm_psi_ks(num_of_bins, trigger, input_path):
             my_class = statistical_metrics_evaluator.StatisticalMetricsEvaluator(bm_train_data,
                                                                                  bm_test_data)
             psi_score, psi_df = my_class.calculate_psi(num_of_bins)
-            psi_score_text = 'PSI Score: ' + str(psi_score)
+            psi_score_text = 'PSI Score: ' + str(round(psi_score, 3))
             psi_df.columns = psi_df.columns.astype(str)
             psi_df = psi_df.reset_index()
             psi_df['index'] = psi_df['index'].astype(str)
@@ -208,6 +244,7 @@ def bm_psi_ks(num_of_bins, trigger, input_path):
                 html.H6('KS Test: ' + str(ks_dict['Test']), style={
                     'textAlign': 'left', 'fontWeight': 'bold'}),
                 html.H6('KS Train & Test: ' + str(ks_dict['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
+
             return psi_df.to_dict('records'), psi_score_text, [{"name": col, "id": col} for col in psi_df.columns], ks_output
         except Exception as e:
             print(e)
@@ -217,9 +254,12 @@ def bm_psi_ks(num_of_bins, trigger, input_path):
 
 @app.callback(
     Output("psi-table-re", "data"),
-    Output("psi-score-re", "text"),
+    Output("psi-score-re", "children"),
     Output('psi-table-re', 'columns'),
     Output("ks-tests-re", "children"),
+    Output('re_psi_score_st', 'data'),
+    Output('re_psi_df_st', 'data'),
+    Output('re_ks_st', 'data'),
     Input("psi-num-of-bins-re", "value"),
     Input('validator-input-trigger', 'data'),
     Input('validator-input-file', 'data'),
@@ -237,7 +277,8 @@ def re_psi_ks(num_of_bins, trigger, input_path):
             my_class_re = statistical_metrics_evaluator.StatisticalMetricsEvaluator(re_train_data,
                                                                                     re_test_data)
             psi_score_re, psi_df_re = my_class_re.calculate_psi(num_of_bins)
-            psi_score_text_re = 'PSI Score: ' + str(psi_score_re)
+            re_psi_df_st = psi_df_re.to_json(orient='split')
+            psi_score_text_re = 'PSI Score: ' + str(round(psi_score_re, 3))
             psi_df_re.columns = psi_df_re.columns.astype(str)
             psi_df_re = psi_df_re.reset_index()
             psi_df_re['index'] = psi_df_re['index'].astype(str)
@@ -252,11 +293,11 @@ def re_psi_ks(num_of_bins, trigger, input_path):
                             html.H6('KS Test: ' + str(ks_dict_re['Test']), style={
                                     'textAlign': 'left', 'fontWeight': 'bold'}),
                             html.H6('KS Train & Test: ' + str(ks_dict_re['Train vs Test']), style={'textAlign': 'left', 'fontWeight': 'bold'}),]
-            return psi_df_re.to_dict('records'), psi_score_text_re, [{"name": col, "id": col} for col in psi_df_re.columns], ks_output_re
+            return psi_df_re.to_dict('records'), psi_score_text_re, [{"name": col, "id": col} for col in psi_df_re.columns], ks_output_re, psi_score_re, re_psi_df_st, ks_dict_re
         except Exception as e:
             print(e)
-            return None, None, None, None
-    return None, None, None, None
+            return (None,) * 7
+    return (None,) * 7
 # Update gini features selection based on train dataset for both models
 
 
@@ -307,6 +348,7 @@ def update_bm_gini(ft_name_list: list[str], trigger, input_path):
 
 @app.callback(
     Output("gini-viz-re", "children"),
+    Output('re_ft_gini_st', 'data'),
     Input("gini-feature-multi-dynamic-dropdown-re", "value"),
     Input('validator-input-trigger', 'data'),
     Input('validator-input-file', 'data'),
@@ -327,7 +369,7 @@ def update_re_gini(ft_name_list: list[str], trigger, input_path):
             gini_children.append(
                 html.H5(ft_name + ' GINI Index: ' + str(gini[ft_name])))
 
-        return gini_children
+        return gini_children, gini
 
 # Generate and populate csi feature metrics for both models
 
@@ -393,6 +435,8 @@ def update_csi_metrics_bm(feature_list, num_of_bins, trigger, input_path):
 
 @app.callback(
     Output("feature-related-viz-re", "children"),
+    Output('re_csi_dfs_st', 'data'),
+    Output('re_csi_dicts_st', 'data'),
     Input("csi-feature-multi-dynamic-dropdown-re", "value"),
     Input("csi-num-of-bins-re", "value"),
     Input('validator-input-trigger', 'data'),
@@ -410,9 +454,10 @@ def update_csi_metrics_re(feature_list, num_of_bins, trigger, input_path):
         csi_df, csi_dict = stats_class.csi_for_all_features(
             feature_list, num_of_bins)
 
-        csi_children = []
+        csi_children, csi_json_l = [], []
 
         for df, ft_name in zip(csi_df, feature_list):
+            csi_json_l.append(df.to_json(orient='split'))
             df.columns = df.columns.astype(str)
             df = df.reset_index()
             df['index'] = df['index'].astype(str)
@@ -427,7 +472,7 @@ def update_csi_metrics_re(feature_list, num_of_bins, trigger, input_path):
                                                      columns=[{"name": i, "id": i}
                                                               for i in df.columns],
                                                      sort_action='native'))
-        return csi_children
+        return csi_children, csi_json_l, csi_dict
 
 # Output transparency metrics
 
@@ -471,6 +516,10 @@ def bm_transparency_plots(trigger, input_path, bm_path):
 @app.callback(
     Output("global-lime-re", "src"),
     Output("global-shap-re", "src"),
+    Output('re_lime_path_st', 'data'),
+    Output('re_shap_path_st', 'data'),
+    Output('re_lime_lst_st', 'data'),
+    Output('re_shap_lst_st', 'data'),
     Input('validator-input-trigger', 'data'),
     Input('validator-input-file', 'data'),
     Input("validator-rep-model", "data"),
@@ -488,77 +537,87 @@ def re_transparency_plots(trigger, input_path, rep_path):
             evaluator = transparency_metrics_evaluator.TransparencyMetricsEvaluator(
                 re_model, re_train_data['processed_X'].sample(100))
 
-            local_lime_fig, global_lime_fig, local_text_lime, global_text_lime = evaluator.lime_interpretability()
-            global_lime_fig.savefig(
-                '././auto_ml_validation/app/assets/images/global_lime_re.png', bbox_inches='tight')
+            local_lime_fig, global_lime_fig, local_text_lime, global_lime_lst = evaluator.lime_interpretability()
+            global_lime_path = '././auto_ml_validation/app/assets/images/global_lime_re.png'
+            global_lime_fig.savefig(global_lime_path, bbox_inches='tight')
 
-            local_shap_fig, global_shap_fig, local_text_shap, global_text_shap = evaluator.shap_interpretability()
-
-            global_shap_fig.savefig(
-                '././auto_ml_validation/app/assets/images/global_shap_re.png', bbox_inches='tight')
+            local_shap_fig, global_shap_fig, local_text_shap, global_shap_lst = evaluator.shap_interpretability()
+            global_shap_path = '././auto_ml_validation/app/assets/images/global_shap_re.png'
+            global_shap_fig.savefig(global_shap_path, bbox_inches='tight')
             global_lime_re = app.get_asset_url("images/global_lime_re.png")
 
             global_shap_re = app.get_asset_url("images/global_shap_re.png")
         except Exception as e:
             print(e)
             return "", ""
-        return global_lime_re, global_shap_re
+        return global_lime_re, global_shap_re, global_lime_path, global_shap_path, global_lime_lst, global_shap_lst
 
 # Run the evaluation pipeline and generate word doc report
 
 
 @app.callback(
     Output('report-message', 'children'),
-    Input('validator-input-trigger',
-          'data'), Input('validator-input-file', 'data'),
-    Input('threshold', 'value'), Input('threshold-re', 'value'),
-    Input("csi-feature-multi-dynamic-dropdown", "value"), Input("psi-num-of-bins",
-                                                                "value"), Input("csi-num-of-bins", "value"),
-    Input('download-report', 'n_clicks')
+    Input('download-report', 'n_clicks'),
+    State('re_metrics_st', 'data'),
+    State('re_dist_path_st', 'data'),
+    State('re_roc_path_st', 'data'),
+    State('re_pr_path_st', 'data'),
+    State('re_auc_st', 'data'),
+    State('re_psi_score_st', 'data'),
+    State('re_psi_df_st', 'data'),
+    State('re_ks_st', 'data'),
+    State('re_csi_dfs_st', 'data'),
+    State('re_csi_dicts_st', 'data'),
+    State('re_ft_gini_st', 'data'),
+    State('re_lime_path_st', 'data'),
+    State('re_shap_path_st', 'data'),
+    State('re_lime_lst_st', 'data'),
+    State('re_shap_lst_st', 'data'),
+    prevent_initial_call=True,
 )
-def run_evaluation_pipeline(trigger, file_name, bm_thres, re_thres, csi_selected_ft, psi_bins, csi_bins, n_clicks):
-    if trigger and n_clicks:
-        with open(f'././data/validator_input/{file_name}', 'rb') as f:
-            output_dict = pickle.load(f)
-
-        file_name_split = file_name.split('_')
-        with open(f'././models/{file_name_split[0]}_auto_{file_name_split[2]}.pkl', 'rb') as f:
-            bm_model = pickle.load(f)
-        with open(f'././models/{file_name_split[0]}_{file_name_split[1]}_rep_{file_name_split[2]}.pkl', 'rb') as f:
-            re_model = pickle.load(f)
-
-        if 'bm_train_data' in output_dict and bm_model is None:
-            raise ValueError(f'Please give the benchmark model.')
+def convert_to_report(
+    n_clicks,
+    re_metrics,
+    re_dist_path,
+    re_roc_path,
+    re_pr_path,
+    re_auc,
+    re_psi_score,
+    re_psi_df,
+    re_ks,
+    re_csi_list,
+    re_csi_dict,
+    re_ginis,
+    re_lime_path,
+    re_shap_path,
+    re_lime_lst,
+    re_shap_lst,
+):
+    if n_clicks:
+        re_psi_df = pd.read_json(re_psi_df, orient='split')
+        re_csi_list = [pd.read_json(df, orient='split') for df in re_csi_list]
         re_eval_outputs = {}
-        re_other_data = output_dict['re_other_data']
-        for ds_name, test_data in re_other_data.items():
-            charts, txt = evaluation_pipeline(
-                re_model,
-                output_dict['re_train_data'],
-                test_data,
-                float(re_thres),
-                csi_selected_ft, psi_bins, csi_bins
-            )
-            re_eval_outputs[ds_name] = {}
-            re_eval_outputs[ds_name]['charts'] = charts
-            re_eval_outputs[ds_name]['txt'] = txt
+        re_eval_outputs['Test'] = {}
+        re_eval_outputs['Test']['charts'] = {
+            'dist': re_dist_path,
+            'pr': re_pr_path,
+            'roc': re_roc_path,
+            'global_lime': re_lime_path,
+            'global_shap': re_shap_path,
+        }
+        re_eval_outputs['Test']['txt'] = {
+            'metrics': re_metrics,
+            'feature_gini': re_ginis,
+            'auc': re_auc,
+            'global_lime': re_lime_lst,
+            'global_shap': re_shap_lst,
+            'psi': re_psi_score,
+            'psi_df': re_psi_df,
+            'csi_list': re_csi_list,
+            'csi_dict': re_csi_dict,
+            'ks': re_ks
+        }
 
-        if 'bm_train_data' in output_dict:
-            bm_eval_outputs = {}
-            bm_other_data = output_dict['bm_other_data']
-            for ds_name, test_data in bm_other_data.items():
-                charts, txt = evaluation_pipeline(
-                    bm_model,
-                    output_dict['bm_train_data'],
-                    test_data,
-                    float(bm_thres),
-                    csi_selected_ft, psi_bins, csi_bins
-                )
-                bm_eval_outputs[ds_name] = {}
-                bm_eval_outputs[ds_name]['charts'] = charts
-                bm_eval_outputs[ds_name]['txt'] = txt
-        else:
-            bm_eval_outputs = None
-
-        generate_report(re_eval_outputs, bm_eval_outputs)
+        generate_report(re_eval_outputs,
+                        report_path='./outputs/test_bc2_report.docx')
         return "Report generated!"
