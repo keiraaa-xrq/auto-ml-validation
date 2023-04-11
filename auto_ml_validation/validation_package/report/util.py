@@ -58,7 +58,7 @@ interp_map = {
     },
     "global_": {
         "title": "Global",
-        "exp": "Global interpretability, on the other hand, refers to the ability to explain the behavior of a model across its entire input space. It focuses on understanding how the model works in general, rather than on a specific instance. Global interpretability techniques aim to provide insights into the relationships between features and how they contribute to the overall behavior of the model.",
+        "exp": "Global interpretability refers to the ability to explain the behavior of a model across its entire input space. It focuses on understanding how the model works in general, rather than on a specific instance. Global interpretability techniques aim to provide insights into the relationships between features and how they contribute to the overall behavior of the model.",
     },
     "local_": {
         "title": "Local",
@@ -68,29 +68,6 @@ interp_map = {
     "csi": {"title": "CSI", "exp": "It compares the distribution of an independent variable in the training data set to a testing data set. It detects shifts in the distributions of input variables that are submitted for scoring over time. Please refer the link for more details: https://towardsdatascience.com/psi-and-csi-top-2-model-monitoring-metrics-924a2540bed8"},
     "ks": {"title": "Kolmogorov–Smirnov statistic", "exp": ":Quantifies a distance of the distribution within the training sample and testing sample, or between the two. Please refer the link for more details: https://en.wikipedia.org/wiki/Kolmogorov%E2%80%93Smirnov_test"},
 }
-
-
-def generate_charts(results: Dict[str, Dict[str, any]], is_benchmark: bool):
-    """Save imgaes to local for the use of report generation, which is required by the package"""
-    postfix = "bm" if is_benchmark else "m"
-    path = pathlib.Path(__file__).parent
-    for dataset, result in results.items():
-        result = result["charts"]
-        for c in ["dist", "pr", "roc"]:
-            result.get(c).write_image(
-                f"{path}/result_images/{c}_{dataset}_{postfix}.png"
-            )
-        for c in ["lift"]:
-            result.get(c).figure.savefig(
-                f"{path}/result_images/{c}_{dataset}_{postfix}.png"
-            )
-        for c in ["confusion"]:
-            result.get(c).figure_.savefig(
-                f"{path}/result_images/{c}_{dataset}_{postfix}.png"
-            )
-        for c in ["local_lime", "global_lime", "local_shap", "global_shap"]:
-            result.get(c).savefig(
-                f"{path}/result_images/{c}_{dataset}_{postfix}.png")
 
 
 def generate_sub_heading(doc, title: str, exp: str):
@@ -118,7 +95,7 @@ def add_row(table, row_count):
     return row_count, table.rows[row_count].cells
 
 
-def generate_chart_table(doc, chart_name: str, results, include_bm: bool = True):
+def generate_chart_table(doc, chart_name: str, results, bm_results):
     generate_sub_heading(
         doc, interp_map.get(chart_name)[
             "title"], interp_map.get(chart_name)["exp"]
@@ -132,13 +109,13 @@ def generate_chart_table(doc, chart_name: str, results, include_bm: bool = True)
         row_count, row = add_row(table, row_count)
         row[0].text, row[1].text = data, "Model"
         row[2].paragraphs[0].add_run().add_picture(
-            f"{pathlib.Path(__file__).parent}/result_images/{chart_name}_{data}_m.png"
+            r['charts'][chart_name]
         )
-        if include_bm:
+        if bm_results:
             row_count, row = add_row(table, row_count)
             row[1].text = "Benchmark Model"
             row[2].paragraphs[0].add_run().add_picture(
-                f"{pathlib.Path(__file__).parent}/result_images/{chart_name}_{data}_bm.png"
+                bm_results[data]['charts'][chart_name]
             )
 
     doc.add_paragraph()
@@ -161,7 +138,7 @@ def generate_chart_auc_table(doc, chart_name: str, results, bm_results):
         row_count, row = add_row(table, row_count)
         row[0].text, row[1].text = data, "Model"
         row[2].paragraphs[0].add_run().add_picture(
-            f"{pathlib.Path(__file__).parent}/result_images/{chart_name}_{data}_m.png"
+            r['charts'][chart_name]
         )
         row[3].text = str(round(r["txt"]["auc"][auc_name], 6))
 
@@ -169,7 +146,7 @@ def generate_chart_auc_table(doc, chart_name: str, results, bm_results):
             row_count, row = add_row(table, row_count)
             row[1].text = "Benchmark Model"
             row[2].paragraphs[0].add_run().add_picture(
-                f"{pathlib.Path(__file__).parent}/result_images/{chart_name}_{data}_bm.png"
+                bm_results[data]['charts'][chart_name]
             )
             row[3].text = str(
                 round(bm_results[data]["txt"]["auc"][auc_name], 6))
@@ -332,7 +309,7 @@ def generate_trans_table(doc, name: str, results, bm_results: Optional[any] = No
     )
     cols = 5 if bm_results else 3
 
-    for scope in ["local_", "global_"]:
+    for scope in ["global_"]:
         metric = scope + name
         generate_sub_heading(
             doc, f"{interp_map.get(scope)['title']} {interp_map.get(name)['title']}", None
@@ -352,12 +329,12 @@ def generate_trans_table(doc, name: str, results, bm_results: Optional[any] = No
             row[0].text = data
             row[1].merge(row[2])
             row[1].paragraphs[0].add_run().add_picture(
-                f"{pathlib.Path(__file__).parent}/result_images/{metric}_{data}_m.png"
+                results[data]['charts'][metric]
             )
             if bm_results:
                 row[3].merge(row[4])
                 row[3].paragraphs[0].add_run().add_picture(
-                    f"{pathlib.Path(__file__).parent}/result_images/{metric}_{data}_bm.png"
+                    bm_results[data]['charts'][metric]
                 )
                 row_count = _fill_table(
                     table, row_count, r["txt"][metric], bm_results[data]["txt"][metric]
