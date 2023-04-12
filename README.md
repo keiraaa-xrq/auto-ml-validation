@@ -16,9 +16,16 @@ The tool provides the following functionalities:
 - Scikit-learn
 - Poetry
 
+### Algorithms Supported
+- K-Nearest Neighbours
+- Decision Tree
+- XGBoost
+- Logistic Regression
+- Support Vector Machine
+- Random Forest
+
 ### System Design
 ![System Design](https://github.com/keiraaa-xrq/auto-ml-validation/blob/main/auto_ml_validation/app/assets/images/SystemDesign.png)
-
 
 ### Set up
 1. Download the package and put its contents to a directory of your choice.
@@ -37,7 +44,7 @@ The tool provides the following functionalities:
 9. Run the app.py file in the root directory of the package to start the application.
    1. `py app.py`
 
-### Results
+### Sample
 
 1. Home Page
 
