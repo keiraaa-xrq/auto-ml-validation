@@ -9,13 +9,16 @@ The tool provides the following functionalities:
 - Report Generation
 - User Interface
 
-
 ### Tools & Technologies
 - Python 
 - Dash
 - Joblib 
 - Scikit-learn
 - Poetry
+
+### System Design
+![System Design](https://github.com/keiraaa-xrq/auto-ml-validation/auto_ml_validation/app/assets/images/SystemDesign.png)
+
 
 ### Set up
 
