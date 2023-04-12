@@ -30,18 +30,13 @@ The tool provides the following functionalities:
    1. `virtualenv myenv`
 6. Activate the virtual environment
    1. `source myenv/bin/activate`
-7. Install Poetry on your local machine by running the following command in your terminal or command prompt:
+7. Install `Poetry` on your local machine by running the following command in your terminal or command prompt:
    1. `py -m pip install poetry`
 8. Install the required packages from the Poetry file by navigating to the root directory of the package and running the following command
    1. `poetry install`
-9. Once you have installed the required packages, you can run the app.py file in the root directory of the package to start the application. You can do this by navigating to the root directory of the package in your terminal or command prompt and running the following command:
+9. Run the app.py file in the root directory of the package to start the application.
    1. `py app.py`
-10. Deactivate environment once you are done with the app
-   1. `deactivate`
-
-
-
-
-
 
 ### Results
+
+
