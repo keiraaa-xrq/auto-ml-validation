@@ -25,5 +25,5 @@ The tool provides the following functionalities:
 2. Install Python 3.6.2 on your local machine, if it's not already installed. You can download this version from the [official Python website](https://www.python.org/downloads/release/python-362/).
 3. Open Command Prompt/Bash
 4. Install `virtualenv` package (if not already installed)
-pip install virtualenv
+`pip install virtualenv`
 ### Results
