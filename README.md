@@ -39,4 +39,13 @@ The tool provides the following functionalities:
 
 ### Results
 
+1. Home Page
+
+![Home Page](/gif/Home_Page.gif)
+
+2. Result Page
+
+![Result Page](/gif/Result_Page.gif)
+
+
 
