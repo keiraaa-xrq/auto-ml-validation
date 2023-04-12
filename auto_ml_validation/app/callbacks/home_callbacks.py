@@ -291,6 +291,7 @@ def modelling_process(loading, proj, rep_data, auto_data):
 
         project_name = project_dict['Project Name']
         algorithm = project_dict['Algorithm']
+        date = project_dict['Date']
         hyperparams = rep_dict['Hyperparams']
         rep_train = pd.DataFrame(rep_dict['Train Data'])
         rep_test = pd.DataFrame(rep_dict['Test Data'])
@@ -306,9 +307,9 @@ def modelling_process(loading, proj, rep_data, auto_data):
         bool_map = {"yes": True, "no": False}
         feat_sel = bool_map.get(auto_dict['Feature Selection'])
         try:
-            output, output_path, rep_path, bm_path = model_pipeline.autoML(project_name, algorithm, hyperparams,
-                                                                           rep_train, rep_test, rep_other, target, cat_cols,
-                                                                           auto_train, auto_test, auto_other, metric, feat_sel)
+            output, output_path, rep_path, bm_path = model_pipeline.auto_ml(project_name, algorithm, date, hyperparams,
+                                                                            rep_train, rep_test, rep_other, target, cat_cols,
+                                                                            auto_train, auto_test, auto_other, metric, feat_sel)
             return '/results', "", True, output_path, rep_path, bm_path
         except Exception as e:
             return '/home', f"Model Building has failed. Error: {e}. Please try again. ", False, None, None, None

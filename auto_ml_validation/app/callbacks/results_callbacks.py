@@ -90,12 +90,12 @@ results_layout = html.Div(
 
 def get_performance_metrics(threshold, input_path, model_path, prefix):
     try:
-        with open(f'././{input_path}', 'rb') as f:
+        with open(f'{input_path}', 'rb') as f:
             data = pickle.load(f)
 
         test_data = data[f'{prefix}_other_data']['Test']
 
-        with open(f'././{model_path}', 'rb') as f:
+        with open(f'{model_path}', 'rb') as f:
             model = pickle.load(f)
 
         pme_obj = PerformanceEvaluator(test_data['pred_proba'],
@@ -105,13 +105,13 @@ def get_performance_metrics(threshold, input_path, model_path, prefix):
                                        model)
 
         dist = pme_obj.get_dist_plot()
-        dist_path = f'././auto_ml_validation/app/assets/images/dist_{prefix}.png'
+        dist_path = f'./auto_ml_validation/app/assets/images/dist_{prefix}.png'
         dist.write_image(dist_path)
         roc = pme_obj.get_roc_curve()
-        roc_path = f'././auto_ml_validation/app/assets/images/roc_{prefix}.png'
+        roc_path = f'./auto_ml_validation/app/assets/images/roc_{prefix}.png'
         roc.write_image(roc_path)
         pr = pme_obj.get_pr_curve()
-        pr_path = f'././auto_ml_validation/app/assets/images/pr_{prefix}.png'
+        pr_path = f'./auto_ml_validation/app/assets/images/pr_{prefix}.png'
         pr.write_image(pr_path)
         metrics = pme_obj.cal_metrics()
         auc = pme_obj.cal_auc()
@@ -202,7 +202,7 @@ def update_threshold_text_re(value):
 
 def get_psi_ks(num_of_bins, input_path, prefix):
     try:
-        with open(f'././{input_path}', 'rb') as f:
+        with open(f'{input_path}', 'rb') as f:
             data = pickle.load(f)
         train_data = data[f'{prefix}_train_data']
         test_data = data[f'{prefix}_other_data']['Test']
@@ -282,7 +282,7 @@ def re_psi_ks(num_of_bins, trigger, input_path):
 )
 def update_gini_dropdown(trigger, input_path):
     if trigger:
-        with open(f'././{input_path}', 'rb') as f:
+        with open(f'{input_path}', 'rb') as f:
             data = pickle.load(f)
         bm_train_data = data['bm_train_data']
         re_train_data = data['re_train_data']
@@ -294,7 +294,7 @@ def update_gini_dropdown(trigger, input_path):
 
 def get_gini(ft_names, input_path, prefix):
     try:
-        with open(f'././{input_path}', 'rb') as f:
+        with open(f'{input_path}', 'rb') as f:
             data = pickle.load(f)
         train_data = data[f'{prefix}_train_data']
         test_data = data[f'{prefix}_other_data']['Test']
@@ -347,7 +347,7 @@ def update_re_gini(ft_name_list: list[str], trigger, input_path):
 )
 def update_csi_dropdown(trigger, input_path):
     if trigger:
-        with open(f'././{input_path}', 'rb') as f:
+        with open(f'{input_path}', 'rb') as f:
             data = pickle.load(f)
         bm_train_data = data['bm_train_data']
         re_train_data = data['re_train_data']
@@ -357,7 +357,7 @@ def update_csi_dropdown(trigger, input_path):
 
 def get_csi(features, num_of_bins, input_path, prefix):
     try:
-        with open(f'././{input_path}', 'rb') as f:
+        with open(f'{input_path}', 'rb') as f:
             data = pickle.load(f)
         train_data = data[f'{prefix}_train_data']
         test_data = data[f'{prefix}_other_data']['Test']
@@ -423,9 +423,9 @@ def update_csi_metrics_re(feature_list, num_of_bins, trigger, input_path):
 # Output transparency metrics
 def get_transparency_plots(input_path, model_path, prefix):
     try:
-        with open(f'././{input_path}', 'rb') as f:
+        with open(f'{input_path}', 'rb') as f:
             data = pickle.load(f)
-        with open(f'././{model_path}', 'rb') as f:
+        with open(f'{model_path}', 'rb') as f:
             model = pickle.load(f)
 
         train_data = data[f'{prefix}_train_data']
@@ -434,11 +434,11 @@ def get_transparency_plots(input_path, model_path, prefix):
             model, train_data['processed_X'].sample(100))
 
         local_lime_fig, global_lime_fig, local_text_lime, global_lime_lst = evaluator.lime_interpretability()
-        global_lime_path = f'././auto_ml_validation/app/assets/images/global_lime_{prefix}.png'
+        global_lime_path = f'./auto_ml_validation/app/assets/images/global_lime_{prefix}.png'
         global_lime_fig.savefig(global_lime_path, bbox_inches='tight')
 
         local_shap_fig, global_shap_fig, local_text_shap, global_shap_lst = evaluator.shap_interpretability()
-        global_shap_path = f'././auto_ml_validation/app/assets/images/global_shap_{prefix}.png'
+        global_shap_path = f'./auto_ml_validation/app/assets/images/global_shap_{prefix}.png'
         global_shap_fig.savefig(global_shap_path, bbox_inches='tight')
         global_lime_url = app.get_asset_url(f"images/global_lime_{prefix}.png")
         global_shap_url = app.get_asset_url(f"images/global_shap_{prefix}.png")
@@ -632,9 +632,8 @@ def convert_to_report(
         proj_dict = json.loads(project_config)
         proj_name = proj_dict['Project Name']
         date = proj_dict['Date']
-        os.makedirs(f'./outputs', exist_ok=True)
         generate_report(
             re_eval_outputs,
             bm_eval_outputs,
-            report_path=f'./outputs/{proj_name}_{date}_report.docx')
+            report_path=f'./outputs/{proj_name}/{date}/report.docx')
         return "Report generated!"

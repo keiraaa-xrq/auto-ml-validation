@@ -6,9 +6,7 @@ from datetime import datetime
 import pickle
 import logging
 
-from auto_ml_validation.validation_package.algorithms.xgboost import XGBoostClassifier
-from auto_ml_validation.validation_package.algorithms.random_forest import RFClassifier
-from auto_ml_validation.validation_package.process_data import split_x_y, process_data, split_train_val
+from auto_ml_validation.validation_package.process_data import split_x_y, process_data
 from auto_ml_validation.validation_package.benchmark_pipeline import auto_benchmark, save_benchmark_output
 from auto_ml_validation.validation_package.train_pipeline import train as replicate
 from .utils.logger import setup_main_logger, log_info, log_error
@@ -16,9 +14,9 @@ from .utils.logger import setup_main_logger, log_info, log_error
 logger = logging.getLogger("main."+__name__)
 
 
-def autoML(project_name: str, algorithm: str, hyperparams: dict,
-           rep_train: pd.DataFrame, rep_test: pd.DataFrame, rep_other: List, target: str, cat_cols: List,
-           auto_train: pd.DataFrame, auto_test: pd.DataFrame, auto_other: List, metric: str, feat_sel_bool: bool) -> Dict[str, Dict[str, pd.DataFrame]]:
+def auto_ml(project_name: str, algorithm: str, date: str, hyperparams: dict,
+            rep_train: pd.DataFrame, rep_test: pd.DataFrame, rep_other: List, target: str, cat_cols: List,
+            auto_train: pd.DataFrame, auto_test: pd.DataFrame, auto_other: List, metric: str, feat_sel_bool: bool) -> Dict[str, Dict[str, pd.DataFrame]]:
     """Main Function to generate the output
 
     Args:
@@ -41,10 +39,10 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
         str: Output file name produced from model
     """
     # Variables and Logging
-    DATE = datetime.today().strftime('%Y-%m-%d')
-    os.makedirs(f'./models', exist_ok=True)
-    rep_save_path = f'models/{project_name}_{algorithm}_rep_{DATE}.pkl'
-    auto_save_path = f'models/{project_name}_auto_{DATE}.pkl'
+    outputs_dir = f'./outputs/{project_name}/{date}'
+    os.makedirs(outputs_dir, exist_ok=True)
+    rep_save_path = f'{outputs_dir}/{algorithm}_replicated.pkl'
+    auto_save_path = f'{outputs_dir}/benchmark_model.pkl'
 
     logger = setup_main_logger(project_name)
 
@@ -62,8 +60,13 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
         if feat_sel_bool:
             log_info(logger, 'Beginning Feature Selection...')
         log_info(logger, 'Creating the benchmark model...')
+        bm_models_dir = f'{outputs_dir}/bm_models'
+        os.makedirs(bm_models_dir, exist_ok=True)
+        bm_results_path = f'{outputs_dir}/bm_results.json'
         bm_train_data, bm_other_data = run_auto_bmk(
-            auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs=-1, mode='parallel', save_path=auto_save_path)
+            auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs=-1, mode='parallel',
+            save_path=auto_save_path, models_dir=bm_models_dir, results_path=bm_results_path
+        )
     except Exception as e:
         error_message = "Returning to homepage... An error occurred while creating the benchmark model: %s. " % str(
             e)
@@ -75,7 +78,7 @@ def autoML(project_name: str, algorithm: str, hyperparams: dict,
     log_info(logger, 'Almost done...')
 
     # Save Output
-    output_path = f'data/validator_input/{project_name}_{algorithm}_{DATE}_data.pkl'
+    output_path = f'{outputs_dir}/validator_input_data.pkl'
     with open(output_path, 'wb') as f:
         pickle.dump(output_dict, f)
 
@@ -116,7 +119,7 @@ def run_model_replication(raw_train, raw_test, raw_others, rep_train, rep_test, 
     return re_train_data, re_other_data
 
 
-def run_auto_bmk(raw_train, raw_test, raw_others, target, cat_cols, metric, feat_sel_bool, n_jobs, mode, save_path):
+def run_auto_bmk(raw_train, raw_test, raw_others, target, cat_cols, metric, feat_sel_bool, n_jobs, mode, save_path, models_dir, results_path):
     """Full Cycle of Auto-Benchmarking
 
     Returns:
@@ -133,7 +136,7 @@ def run_auto_bmk(raw_train, raw_test, raw_others, target, cat_cols, metric, feat
                                                        X_test, y_test, metric, feat_sel_bool,
                                                        n_jobs=n_jobs, mode=mode, save=True, save_path=save_path, verbose=True)
 
-    # save_benchmark_output(benchmark_output, models_dir, result_path)
+    save_benchmark_output(benchmark_output, models_dir, results_path)
     # To inverse OHE, col_mapping dictionary (k, v) where k is OHE processed column and v is original column
     feats_selected = benchmark_output[benchmark_model.name]['features_selected']
     feats_selected_mapped = set([col_mapping.get(
