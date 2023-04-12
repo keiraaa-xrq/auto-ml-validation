@@ -42,7 +42,7 @@ The tool provides the following functionalities:
 8. Install the required packages from the Poetry file by navigating to the root directory of the package and running the following command
    1. `poetry install`
 9. Run the app.py file in the root directory of the package to start the application.
-   1. `py app.py`
+   1. `poetry run python app.py`
 
 ### Sample Output
 
