@@ -44,7 +44,7 @@ The tool provides the following functionalities:
 9. Run the app.py file in the root directory of the package to start the application.
    1. `py app.py`
 
-### Sample
+### Sample Output
 
 1. Home Page
 
