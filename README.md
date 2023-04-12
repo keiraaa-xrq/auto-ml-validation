@@ -17,7 +17,7 @@ The tool provides the following functionalities:
 - Poetry
 
 ### System Design
-![System Design](https://github.com/keiraaa-xrq/auto-ml-validation/auto_ml_validation/app/assets/images/SystemDesign.png)
+![System Design](https://github.com/keiraaa-xrq/auto-ml-validation/tree/main/auto_ml_validation/app/assets/images/SystemDesign.png)
 
 
 ### Set up
