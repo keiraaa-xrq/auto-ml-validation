@@ -36,6 +36,10 @@ def generate_report(
         generate_chart_auc_table(doc, 'pr', m_result, bm_result)
     except Exception as e:
         log_error(logger, f'Error in plotting PR curve: {e}')
+    try:
+        generate_gini_table(doc, m_result, bm_result)
+    except Exception as e:
+        log_error(logger, f'Error in generating model gini: {e}')
 
     doc.add_heading('Statistical Metrics', 1)
     doc.add_paragraph("This section includes statistical metrics.")
@@ -45,19 +49,9 @@ def generate_report(
         log_error(logger, f'Error in generating PSI: {e}')
         raise e
     try:
-        samp_res = m_result[list(m_result.keys())[0]]['txt']['csi_dict']
-        if len(samp_res) > 0:
-            generate_csi_table(doc, m_result)
-    except Exception as e:
-        log_error(logger, f'Error in generating CSI: {e}')
-    try:
         generate_ks_table(doc, m_result, bm_result)
     except Exception as e:
         log_error(logger, f'Error in generating KS test: ({e}')
-    try:
-        generate_feature_gini_table(doc, m_result, bm_result)
-    except Exception as e:
-        log_error(logger, f'Error in generating GINI: {e}')
 
     try:
         doc.add_heading('Transparency Metrics', 1)
@@ -69,5 +63,18 @@ def generate_report(
         generate_trans_table(doc, 'shap', m_result, bm_result)
     except:
         log_error(logger, "Error in generating transparency report")
+
+    doc.add_heading('Feature-Related Metrics', 1)
+    doc.add_paragraph("This section includes feature-related metrics.")
+    try:
+        samp_res = m_result[list(m_result.keys())[0]]['txt']['csi_dict']
+        if len(samp_res) > 0:
+            generate_csi_table(doc, m_result)
+    except Exception as e:
+        log_error(logger, f'Error in generating CSI: {e}')
+    try:
+        generate_feature_gini_table(doc, m_result)
+    except Exception as e:
+        log_error(logger, f'Error in generating feature gini: {e}')
 
     doc.save(report_path)

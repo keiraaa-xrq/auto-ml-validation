@@ -29,17 +29,17 @@ def instantiate_clf(
     params: Dict,
 ) -> AbstractBinaryClassifier:
     algos = {'dt', 'knn', 'logistic', 'rf', 'svm', 'xgboost'}
-    if algo == 'dt':
+    if algo == 'dt' or algo == 'Decision Tree Classifier':
         clf = DTClassifier(params)
-    elif algo == 'knn':
+    elif algo == 'knn' or algo == 'K Neighbors Classifier':
         clf = KNNClassifier(params)
-    elif algo == 'logistic':
+    elif algo == 'logistic' or algo == 'Logistic Classifier':
         clf = LogisticClassifier(params)
-    elif algo == 'rf':
+    elif algo == 'rf' or algo == 'Random Forest Classifier':
         clf = RFClassifier(params)
-    elif algo == 'svm':
+    elif algo == 'svm' or algo == 'Support Vector Classifier':
         clf = SVClassifier(params)
-    elif algo == 'xgboost':
+    elif algo == 'xgboost' or algo == 'XGBoost Classifier':
         clf = XGBoostClassifier(params)
     else:
         raise ValueError(

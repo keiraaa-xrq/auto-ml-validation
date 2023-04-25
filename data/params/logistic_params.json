@@ -1,0 +1,5 @@
+{
+  "C": 0.01,
+  "random_state": 42,
+  "class_weight": "balanced"
+}

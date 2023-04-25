@@ -47,8 +47,10 @@ app.layout = html.Div([
               data='', storage_type='session'),
     dcc.Store(id='validator-rep-model', data='', storage_type='session'),
     dcc.Store(id='validator-bm-model', data='', storage_type='session'),
+    dcc.Store(id='rep-algo', data='', storage_type='session'),
+    dcc.Store(id='bm-algo', data='', storage_type='session'),
 ])
 
 
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True, dev_tools_hot_reload=False)

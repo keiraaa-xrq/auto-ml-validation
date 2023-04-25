@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from auto_ml_validation.app.index import app
 from auto_ml_validation.app.pages.results import *
 from dash.dependencies import Input, Output, State
+from ...validation_package.utils.utils import instantiate_clf
 from ...validation_package.evaluation.performance_metrics_evaluator import PerformanceEvaluator
 from ...validation_package.evaluation.statistical_metrics_evaluator import StatisticalMetricsEvaluator
 from ...validation_package.evaluation.transparency_metrics_evaluator import TransparencyMetricsEvaluator
@@ -21,9 +22,6 @@ re_layout = html.Div(
         re_performance_metric_layout(),
         re_statistical_model_metrics_layout(),
         html.Br(),
-        re_gini_layout(),
-        re_csi_table_layout(),
-        html.Br(),
         re_trans_layout(),
     ],
     style={'width': '100%', 'display': 'inline-block',
@@ -37,12 +35,17 @@ bm_layout = html.Div(
         bm_performance_metric_layout(),
         bm_statistical_model_metrics_layout(),
         html.Br(),
-        bm_gini_layout(),
-        bm_csi_table_layout(),
-        html.Br(),
         bm_trans_layout(),
     ],
     style={'width': '100%', 'display': 'inline-block', 'vertical-align': 'top'},
+)
+
+# CSI & feature gini
+ft_layout = html.Div(
+    children=[
+        re_gini_layout(),
+        re_csi_table_layout(),
+    ]
 )
 
 results_layout = html.Div(
@@ -53,17 +56,17 @@ results_layout = html.Div(
         html.Br(),
         html.Div([re_layout, bm_layout], style={
                  'display': 'flex',  'clear': 'right'}),
+        ft_layout,
+
         dcc.Store(id='re_dist_path_st', data=None, storage_type='session'),
         dcc.Store(id='re_roc_path_st', data=None, storage_type='session'),
         dcc.Store(id='re_pr_path_st', data=None, storage_type='session'),
         dcc.Store(id='re_metrics_st', data=None, storage_type='session'),
         dcc.Store(id='re_auc_st', data=None, storage_type='session'),
+        dcc.Store(id='re_model_gini_st', data=None, storage_type='session'),
         dcc.Store(id='re_psi_score_st', data=None, storage_type='session'),
         dcc.Store(id='re_psi_df_st', data=None, storage_type='session'),
         dcc.Store(id='re_ks_st', data=None, storage_type='session'),
-        dcc.Store(id='re_csi_dfs_st', data=None, storage_type='session'),
-        dcc.Store(id='re_csi_dicts_st', data=None, storage_type='session'),
-        dcc.Store(id='re_ft_gini_st', data=None, storage_type='session'),
         dcc.Store(id='re_lime_path_st', data=None, storage_type='session'),
         dcc.Store(id='re_shap_path_st', data=None, storage_type='session'),
         dcc.Store(id='re_lime_lst_st', data=None, storage_type='session'),
@@ -74,30 +77,40 @@ results_layout = html.Div(
         dcc.Store(id='bm_pr_path_st', data=None, storage_type='session'),
         dcc.Store(id='bm_metrics_st', data=None, storage_type='session'),
         dcc.Store(id='bm_auc_st', data=None, storage_type='session'),
+        dcc.Store(id='bm_model_gini_st', data=None, storage_type='session'),
         dcc.Store(id='bm_psi_score_st', data=None, storage_type='session'),
         dcc.Store(id='bm_psi_df_st', data=None, storage_type='session'),
         dcc.Store(id='bm_ks_st', data=None, storage_type='session'),
-        dcc.Store(id='bm_ft_gini_st', data=None, storage_type='session'),
         dcc.Store(id='bm_lime_path_st', data=None, storage_type='session'),
         dcc.Store(id='bm_shap_path_st', data=None, storage_type='session'),
         dcc.Store(id='bm_lime_lst_st', data=None, storage_type='session'),
         dcc.Store(id='bm_shap_lst_st', data=None, storage_type='session'),
+
+        dcc.Store(id='re_csi_dfs_st', data=None, storage_type='session'),
+        dcc.Store(id='re_csi_dicts_st', data=None, storage_type='session'),
+        dcc.Store(id='re_ft_gini_st', data=None, storage_type='session'),
     ]
 )
 # Callbacks
 # Output generic performance metrics for both Model Replication and Auto-Benchmark
 
 
-def get_performance_metrics(threshold, input_path, model_path, prefix):
+def get_performance_metrics(threshold, input_path, model_path, algo, prefix):
     try:
         with open(f'{input_path}', 'rb') as f:
             data = pickle.load(f)
-
         test_data = data[f'{prefix}_other_data']['Test']
-
-        with open(f'{model_path}', 'rb') as f:
-            model = pickle.load(f)
-
+    except Exception as e:
+        print(f'Error in loading data: {e}')
+        return (None,)*11
+    try:
+        clf = instantiate_clf(algo, {})
+        clf.load_model(model_path)
+        model = clf.model
+    except Exception as e:
+        print(f'Error in loading model: {e}')
+        return (None,)*11
+    try:
         pme_obj = PerformanceEvaluator(test_data['pred_proba'],
                                        float(threshold),
                                        test_data['y'],
@@ -143,14 +156,15 @@ def get_performance_metrics(threshold, input_path, model_path, prefix):
     Output('bm_pr_path_st', 'data'),
     Output('bm_auc_st', 'data'),
     Input('threshold', 'value'),
-    State('validator-input-trigger', "data"),
+    Input('validator-input-trigger', "data"),
     State('validator-input-file', 'data'),
     State("validator-bm-model", "data"),
+    State('bm-algo', 'data')
 )
-def bm_performance_metrics(threshold_bm, trigger, input_path, bm_path):
+def bm_performance_metrics(threshold_bm, trigger, input_path, bm_path, algo):
     if trigger:
         print("Generating benchmark performance metrics.")
-        return get_performance_metrics(threshold_bm, input_path, bm_path, 'bm')
+        return get_performance_metrics(threshold_bm, input_path, bm_path, algo, 'bm')
     return (None,) * 11
 
 
@@ -168,13 +182,14 @@ def bm_performance_metrics(threshold_bm, trigger, input_path, bm_path):
     Output('re_auc_st', 'data'),
     Input('threshold-re', 'value'),
     Input('validator-input-trigger', 'data'),
-    Input('validator-input-file', 'data'),
-    Input("validator-rep-model", "data"),
+    State('validator-input-file', 'data'),
+    State("validator-rep-model", "data"),
+    State('rep-algo', 'data')
 )
-def re_performance_metrics(threshold_re, trigger, input_path, rep_path):
+def re_performance_metrics(threshold_re, trigger, input_path, rep_path, algo):
     if trigger:
         print("Generating replication performance metrics.")
-        return get_performance_metrics(threshold_re, input_path, rep_path, 're')
+        return get_performance_metrics(threshold_re, input_path, rep_path, algo, 're')
     return (None,) * 11
 
 # Update benchmark threshold value
@@ -275,7 +290,6 @@ def re_psi_ks(num_of_bins, trigger, input_path):
 
 
 @app.callback(
-    Output("gini-feature-multi-dynamic-dropdown", "options"),
     Output("gini-feature-multi-dynamic-dropdown-re", "options"),
     Input('validator-input-trigger', 'data'),
     Input('validator-input-file', 'data'),
@@ -284,63 +298,61 @@ def update_gini_dropdown(trigger, input_path):
     if trigger:
         with open(f'{input_path}', 'rb') as f:
             data = pickle.load(f)
-        bm_train_data = data['bm_train_data']
         re_train_data = data['re_train_data']
-        return dict(zip(bm_train_data['raw_X'].columns.to_list(), bm_train_data['raw_X'].columns.to_list())), dict(zip(re_train_data['raw_X'].columns.to_list(), re_train_data['raw_X'].columns.to_list()))
+        return dict(zip(re_train_data['raw_X'].columns.to_list(), re_train_data['raw_X'].columns.to_list()))
     return []
 
 # Output gini metric for benchmark model
 
 
-def get_gini(ft_names, input_path, prefix):
-    try:
-        with open(f'{input_path}', 'rb') as f:
-            data = pickle.load(f)
-        train_data = data[f'{prefix}_train_data']
-        test_data = data[f'{prefix}_other_data']['Test']
-        stats_class = StatisticalMetricsEvaluator(train_data, test_data)
-        gini = stats_class.cal_feature_gini()
-
-        gini_children = []
-
-        for ft_name in ft_names:
-            gini_children.append(
-                html.H5(ft_name + ' GINI Index: ' + str(gini[ft_name])))
-        return gini_children, gini
-    except Exception as e:
-        print(e)
-        return (None,) * 2
-
-
 @app.callback(
-    Output("gini-viz", "children"),
-    Output('bm_ft_gini_st', 'data'),
-    Input("gini-feature-multi-dynamic-dropdown", "value"),
+    Output('re_ft_gini_st', 'data'),
+    Output('re_model_gini_st', 'data'),
+    Output('bm_model_gini_st', 'data'),
+    Output('re-model-gini', 'children'),
+    Output('bm-model-gini', 'children'),
     Input('validator-input-trigger', 'data'),
     Input('validator-input-file', 'data'),
 )
-def update_bm_gini(ft_name_list: list[str], trigger, input_path):
+def get_gini(trigger, input_path):
     if trigger:
-        return get_gini(ft_name_list, input_path, 'bm')
-    return (None,) * 2
+        def _stats_evaluator(prefix):
+            train_data = data[f'{prefix}_train_data']
+            test_data = data[f'{prefix}_other_data']['Test']
+            stats_class = StatisticalMetricsEvaluator(
+                train_data, test_data)
+            return stats_class
+        try:
+            with open(f'{input_path}', 'rb') as f:
+                data = pickle.load(f)
+            re_evaluator = _stats_evaluator('re')
+            bm_evaluator = _stats_evaluator('bm')
+            ft_gini = re_evaluator.cal_feature_gini()
+            re_gini = re_evaluator.cal_normalized_gini()
+            bm_gini = bm_evaluator.cal_normalized_gini()
+            return ft_gini, re_gini, bm_gini, round(re_gini, 3), round(bm_gini, 3)
+        except Exception as e:
+            print(f'Error calculating gini: {e}')
+            return ({},) + (None,) * 4
+    return ({},) + (None,) * 4
 
 
 @app.callback(
     Output("gini-viz-re", "children"),
-    Output('re_ft_gini_st', 'data'),
     Input("gini-feature-multi-dynamic-dropdown-re", "value"),
-    Input('validator-input-trigger', 'data'),
-    Input('validator-input-file', 'data'),
+    State('re_ft_gini_st', 'data'),
+    prevent_initial_call=True,
 )
-def update_re_gini(ft_name_list: list[str], trigger, input_path):
-    if trigger:
-        return get_gini(ft_name_list, input_path, 're')
-    return (None,) * 2
+def update_gini(ft_names, gini_all):
+    gini_children = []
+    for ft_name in ft_names:
+        gini = html.H5(ft_name + ' GINI Index: ' + str(gini_all[ft_name]))
+        gini_children.append(gini)
+    return gini_children
+
+
 # Generate and populate csi feature metrics for both models
-
-
 @app.callback(
-    Output("csi-feature-multi-dynamic-dropdown", "options"),
     Output("csi-feature-multi-dynamic-dropdown-re", "options"),
     Input('validator-input-trigger', 'data'),
     Input('validator-input-file', 'data')
@@ -349,9 +361,8 @@ def update_csi_dropdown(trigger, input_path):
     if trigger:
         with open(f'{input_path}', 'rb') as f:
             data = pickle.load(f)
-        bm_train_data = data['bm_train_data']
         re_train_data = data['re_train_data']
-        return dict(zip(bm_train_data['raw_X'].columns.to_list(), bm_train_data['raw_X'].columns.to_list())), dict(zip(re_train_data['raw_X'].columns.to_list(), re_train_data['raw_X'].columns.to_list()))
+        return dict(zip(re_train_data['raw_X'].columns.to_list(), re_train_data['raw_X'].columns.to_list()))
     return []
 
 
@@ -363,12 +374,12 @@ def get_csi(features, num_of_bins, input_path, prefix):
         test_data = data[f'{prefix}_other_data']['Test']
         stats_class = StatisticalMetricsEvaluator(train_data, test_data)
 
-        csi_df, csi_dict = stats_class.csi_for_all_features(
+        csi_dfs, csi_dict = stats_class.csi_for_all_features(
             features, num_of_bins)
 
         csi_children, csi_json_l = [], []
 
-        for df, ft_name in zip(csi_df, features):
+        for df, ft_name in zip(csi_dfs, features):
             csi_json_l.append(df.to_json(orient='split'))
             df.columns = df.columns.astype(str)
             df = df.reset_index()
@@ -393,19 +404,6 @@ def get_csi(features, num_of_bins, input_path, prefix):
 
 
 @app.callback(
-    Output("feature-related-viz", "children"),
-    Input("csi-feature-multi-dynamic-dropdown", "value"),
-    Input("csi-num-of-bins", "value"),
-    Input('validator-input-trigger', 'data'),
-    Input('validator-input-file', 'data'),
-)
-def update_csi_metrics_bm(feature_list, num_of_bins, trigger, input_path):
-    if trigger:
-        return get_csi(feature_list, num_of_bins, input_path, 'bm')
-    return (None,) * 3
-
-
-@app.callback(
     Output("feature-related-viz-re", "children"),
     Output('re_csi_dfs_st', 'data'),
     Output('re_csi_dicts_st', 'data'),
@@ -421,15 +419,22 @@ def update_csi_metrics_re(feature_list, num_of_bins, trigger, input_path):
 
 
 # Output transparency metrics
-def get_transparency_plots(input_path, model_path, prefix):
+def get_transparency_plots(input_path, model_path, algo, prefix):
     try:
         with open(f'{input_path}', 'rb') as f:
             data = pickle.load(f)
-        with open(f'{model_path}', 'rb') as f:
-            model = pickle.load(f)
-
         train_data = data[f'{prefix}_train_data']
-
+    except Exception as e:
+        print(f'Error in loading data: {e}')
+        return ("", "") + (None,) * 4
+    try:
+        clf = instantiate_clf(algo, {})
+        clf.load_model(model_path)
+        model = clf.model
+    except Exception as e:
+        print(f'Error in loading model: {e}')
+        return ("", "") + (None,) * 4
+    try:
         evaluator = TransparencyMetricsEvaluator(
             model, train_data['processed_X'].sample(100))
 
@@ -458,10 +463,11 @@ def get_transparency_plots(input_path, model_path, prefix):
     Input('validator-input-trigger', 'data'),
     State('validator-input-file', 'data'),
     State("validator-bm-model", "data"),
+    State('bm-algo', 'data')
 )
-def bm_transparency_plots(trigger, input_path, bm_path):
+def bm_transparency_plots(trigger, input_path, bm_path, algo):
     if trigger:
-        return get_transparency_plots(input_path, bm_path, 'bm')
+        return get_transparency_plots(input_path, bm_path, algo, 'bm')
     return ("", "") + (None,) * 4
 
 
@@ -473,12 +479,13 @@ def bm_transparency_plots(trigger, input_path, bm_path):
     Output('re_lime_lst_st', 'data'),
     Output('re_shap_lst_st', 'data'),
     Input('validator-input-trigger', 'data'),
-    Input('validator-input-file', 'data'),
-    Input("validator-rep-model", "data"),
+    State('validator-input-file', 'data'),
+    State("validator-rep-model", "data"),
+    State('rep-algo', 'data')
 )
-def re_transparency_plots(trigger, input_path, rep_path):
+def re_transparency_plots(trigger, input_path, rep_path, algo):
     if trigger:
-        return get_transparency_plots(input_path, rep_path, 're')
+        return get_transparency_plots(input_path, rep_path, algo, 're')
     return ("", "") + (None,) * 4
 
 # Run the evaluation pipeline and generate word doc report
@@ -490,6 +497,7 @@ def organise_eval_output(
     roc_path,
     pr_path,
     auc,
+    dataset_gini,
     psi_score,
     psi_df,
     ks,
@@ -515,6 +523,7 @@ def organise_eval_output(
     eval_outputs['Test']['txt'] = {
         'metrics': metrics,
         'feature_gini': ginis,
+        'dataset_gini': dataset_gini,
         'auc': auc,
         'global_lime': lime_lst,
         'global_shap': shap_lst,
@@ -535,12 +544,10 @@ def organise_eval_output(
     State('re_roc_path_st', 'data'),
     State('re_pr_path_st', 'data'),
     State('re_auc_st', 'data'),
+    State('re_model_gini_st', 'data'),
     State('re_psi_score_st', 'data'),
     State('re_psi_df_st', 'data'),
     State('re_ks_st', 'data'),
-    State('re_csi_dfs_st', 'data'),
-    State('re_csi_dicts_st', 'data'),
-    State('re_ft_gini_st', 'data'),
     State('re_lime_path_st', 'data'),
     State('re_shap_path_st', 'data'),
     State('re_lime_lst_st', 'data'),
@@ -551,15 +558,20 @@ def organise_eval_output(
     State('bm_roc_path_st', 'data'),
     State('bm_pr_path_st', 'data'),
     State('bm_auc_st', 'data'),
+    State('bm_model_gini_st', 'data'),
     State('bm_psi_score_st', 'data'),
     State('bm_psi_df_st', 'data'),
     State('bm_ks_st', 'data'),
-    State('bm_ft_gini_st', 'data'),
     State('bm_lime_path_st', 'data'),
     State('bm_shap_path_st', 'data'),
     State('bm_lime_lst_st', 'data'),
     State('bm_shap_lst_st', 'data'),
+
+    State('re_csi_dfs_st', 'data'),
+    State('re_csi_dicts_st', 'data'),
+    State('re_ft_gini_st', 'data'),
     State("store-project", "data"),
+
     prevent_initial_call=True,
 )
 def convert_to_report(
@@ -569,12 +581,10 @@ def convert_to_report(
     re_roc_path,
     re_pr_path,
     re_auc,
+    re_model_gini,
     re_psi_score,
     re_psi_df,
     re_ks,
-    re_csi_list,
-    re_csi_dict,
-    re_ginis,
     re_lime_path,
     re_shap_path,
     re_lime_lst,
@@ -584,14 +594,17 @@ def convert_to_report(
     bm_roc_path,
     bm_pr_path,
     bm_auc,
+    bm_model_gini,
     bm_psi_score,
     bm_psi_df,
     bm_ks,
-    bm_ginis,
     bm_lime_path,
     bm_shap_path,
     bm_lime_lst,
     bm_shap_lst,
+    re_csi_list,
+    re_csi_dict,
+    re_ginis,
     project_config,
 ):
     if n_clicks:
@@ -601,6 +614,7 @@ def convert_to_report(
             re_roc_path,
             re_pr_path,
             re_auc,
+            re_model_gini,
             re_psi_score,
             re_psi_df,
             re_ks,
@@ -618,12 +632,13 @@ def convert_to_report(
             bm_roc_path,
             bm_pr_path,
             bm_auc,
+            bm_model_gini,
             bm_psi_score,
             bm_psi_df,
             bm_ks,
             [],
             {},
-            bm_ginis,
+            {},
             bm_lime_path,
             bm_shap_path,
             bm_lime_lst,

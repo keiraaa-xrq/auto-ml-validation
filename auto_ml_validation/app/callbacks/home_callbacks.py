@@ -27,22 +27,29 @@ loading_layout = loading_div_layout(app)
 
 # Layout
 home_layout = html.Div([
-    # dcc.Location(id='url', refresh=False, pathname='/home'),
     form,
     html.Div(children=[rep_layout, auto_layout,
              submit_button], id='content_div'),
     # Dictionary of Replicating Model Data {Hyperparamaters: Value, Train Dataset: Value, Test Dataset: Value, Other Dataset: Value, Target: Value, Categorical Variable: Value}
-    dcc.Store(id='store-rep-data', data={}, storage_type='session'),
-    # Dictionary of AutoBenchmarking Model Data {Train Dataset: Value, Test Dataset: Value, Other Dataset: Value, Metric: Value, Auto Feat Selection: Yes/No}
-    dcc.Store(id='store-auto-data', data={}, storage_type='session'),
+    dcc.Store(id='store-rep-data', data={}, storage_type='memory'),
+    dcc.Store(id='store-auto-data', data={}, storage_type='memory'),
 ])
-
+"""
+    dcc.Store(id='rep-train', data={}, storage_type='session'),
+    dcc.Store(id='rep-test', data={}, storage_type='session'),
+    dcc.Store(id='rep-other', data={}, storage_type='session'),
+    dcc.Store(id='hyperparams', data={}, storage_type='session'),
+    dcc.Store(id='raw-train', data={}, storage_type='session'),
+    dcc.Store(id='raw-test', data={}, storage_type='session'),
+    dcc.Store(id='raw-other', data={}, storage_type='session'),
+    dcc.Store(id='target', data='', storage_type='session')
+"""
 # Callback
 # Save Project Config and Show Input Forms
 
 
 @app.callback(
-    [Output('store-project', 'data')],
+    [Output('store-project', 'data'), Output('rep-algo', 'data')],
     [Input("project-name", "value"), Input("model-dropdown", "value")]
 )
 def save_proj_dat(project_name, algo_value):
@@ -51,10 +58,9 @@ def save_proj_dat(project_name, algo_value):
     date = datetime.today().strftime('%Y-%m-%d')
     project_config = {
         'Project Name': project_name,
-        'Algorithm': algo_value,
         'Date': date,
     }
-    return [json.dumps(project_config)]
+    return [json.dumps(project_config), algo_value]
 
 # Update File Paths in input text box for Replicating Model
 
@@ -92,8 +98,8 @@ def update_rep_dataset_inputs(hyperparams_contents, train_contents, test_content
 @app.callback(
     [Output('target-var-input', 'options'),
      Output('cat-var-input', 'options')],
-    [Input('train-dataset-upload', 'contents'),
-     Input('train-dataset-upload', 'filename')]
+    [Input('train-auto-upload', 'contents'),
+     Input('train-auto-upload', 'filename')]
 )
 def update_dropdowns(contents, filename):
     if contents is not None:
@@ -276,43 +282,57 @@ def parse_data(content, filename):
     Output("validator-input-file", "data"),
     Output("validator-rep-model", "data"),
     Output("validator-bm-model", "data"),
+    Output("bm-algo", "data"),
     Input("loading-spinner", "loading_state"),
     State("store-project", "data"),
+    State('rep-algo', 'data'),
     State("store-rep-data", "data"),
     State("store-auto-data", "data"),
     prevent_initial_call=True
 )
-def modelling_process(loading, proj, rep_data, auto_data):
+def modelling_process(loading, proj_config, rep_algo, rep_data, auto_data):
     if loading:
         # print(loading)
-        project_dict = json.loads(proj)
+        project_dict = json.loads(proj_config)
         rep_dict = json.loads(rep_data[0])
         auto_dict = json.loads(auto_data[0])
 
         project_name = project_dict['Project Name']
-        algorithm = project_dict['Algorithm']
         date = project_dict['Date']
         hyperparams = rep_dict['Hyperparams']
         rep_train = pd.DataFrame(rep_dict['Train Data'])
+        rep_train.columns = [c.lower() for c in rep_train.columns]
         rep_test = pd.DataFrame(rep_dict['Test Data'])
-        rep_other = [pd.DataFrame(rep_dict['Other Data'])
-                     ] if 'Other Data' in rep_dict else []
+        rep_test.columns = [c.lower() for c in rep_test.columns]
+        if 'Other Data' in rep_dict:
+            rep_other_df = pd.DataFrame(rep_dict['Other Data'])
+            rep_other_df.columns = [c.lower() for c in rep_other_df.columns]
+            rep_other = [rep_other_df]
+        else:
+            rep_other = []
+
         target = rep_dict['Target'].lower()
         cat_cols = [col.lower() for col in rep_dict['Categorical Var']]
         auto_train = pd.DataFrame(auto_dict['Train Data'])
+        auto_train.columns = [c.lower() for c in auto_train.columns]
         auto_test = pd.DataFrame(auto_dict['Test Data'])
-        auto_other = [pd.DataFrame(
-            auto_dict['Other Data'])] if 'Other Data' in auto_dict else []
+        auto_test.columns = [c.lower() for c in auto_test.columns]
+        if 'Other Data' in auto_dict:
+            auto_other_df = pd.DataFrame(auto_dict['Other Data'])
+            auto_other_df.columns = [c.lower() for c in auto_other_df.columns]
+            auto_other = [auto_other_df]
+        else:
+            auto_other = []
         metric = auto_dict['Evaluation Metric']
         bool_map = {"yes": True, "no": False}
         feat_sel = bool_map.get(auto_dict['Feature Selection'])
         try:
-            output, output_path, rep_path, bm_path = model_pipeline.auto_ml(project_name, algorithm, date, hyperparams,
-                                                                            rep_train, rep_test, rep_other, target, cat_cols,
-                                                                            auto_train, auto_test, auto_other, metric, feat_sel)
-            return '/results', "", True, output_path, rep_path, bm_path
+            output_path, rep_path, bm_path, bm_algo = model_pipeline.auto_ml(project_name, rep_algo, date, hyperparams,
+                                                                             rep_train, rep_test, rep_other, target, cat_cols,
+                                                                             auto_train, auto_test, auto_other, metric, feat_sel)
+            return '/results', "", True, output_path, rep_path, bm_path, bm_algo
         except Exception as e:
-            return '/home', f"Model Building has failed. Error: {e}. Please try again. ", False, None, None, None
+            return '/home', f"Model Building has failed. Error: {e}. Please try again. ", False, None, None, None, None
 
     # return current_pathname, "", False, None, None, None
 

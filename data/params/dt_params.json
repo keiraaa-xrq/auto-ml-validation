@@ -1,0 +1,5 @@
+{
+  "criterion": "gini",
+  "min_samples_leaf": 2,
+  "random_state": 42
+}

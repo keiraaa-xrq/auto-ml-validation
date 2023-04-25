@@ -63,7 +63,7 @@ def auto_ml(project_name: str, algorithm: str, date: str, hyperparams: dict,
         bm_models_dir = f'{outputs_dir}/bm_models'
         os.makedirs(bm_models_dir, exist_ok=True)
         bm_results_path = f'{outputs_dir}/bm_results.json'
-        bm_train_data, bm_other_data = run_auto_bmk(
+        bm_train_data, bm_other_data, bm_name = run_auto_bmk(
             auto_train, auto_test, auto_other, target, cat_cols, metric, feat_sel_bool, n_jobs=-1, mode='parallel',
             save_path=auto_save_path, models_dir=bm_models_dir, results_path=bm_results_path
         )
@@ -82,7 +82,7 @@ def auto_ml(project_name: str, algorithm: str, date: str, hyperparams: dict,
     with open(output_path, 'wb') as f:
         pickle.dump(output_dict, f)
 
-    return output_dict, output_path, rep_save_path, auto_save_path
+    return output_path, rep_save_path, auto_save_path, bm_name
 
 
 def run_model_replication(raw_train, raw_test, raw_others, rep_train, rep_test, rep_others, target, algorithm, hyperparams, metric, save_path):
@@ -129,7 +129,7 @@ def run_auto_bmk(raw_train, raw_test, raw_others, target, cat_cols, metric, feat
     raw_others = [raw_test] + raw_others
     X_train, y_train, others, col_mapping = process_data(
         raw_train, raw_others, target, cat_cols)
-    print(col_mapping)
+    # print(col_mapping)
     X_test, y_test = others[0]
 
     benchmark_model, benchmark_output = auto_benchmark(X_train, y_train,
@@ -162,4 +162,4 @@ def run_auto_bmk(raw_train, raw_test, raw_others, target, cat_cols, metric, feat
         bm_other_data[key]['pred_proba'] = benchmark_model.predict_proba(
             X[feats_selected])
 
-    return bm_train_data, bm_other_data
+    return bm_train_data, bm_other_data, benchmark_model.name

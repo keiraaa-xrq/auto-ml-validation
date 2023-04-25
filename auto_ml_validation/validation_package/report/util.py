@@ -347,7 +347,7 @@ def generate_trans_table(doc, name: str, results, bm_results: Optional[any] = No
         doc.add_paragraph()
 
 
-def generate_feature_gini_table(doc, results, bm_results):
+def generate_feature_gini_table(doc, results, bm_results=None):
     def _fill_table(table, row_count: int, m_gini: Dict[str, float], bm_gini: Optional[Dict[str, float]] = None):
         for f, v in m_gini.items():
             row_count, cells = add_row(table, row_count)

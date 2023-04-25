@@ -124,6 +124,13 @@ def bm_performance_metric_layout():
                        style={'font-weight': 'bold'})
             ]),
         html.Br(),
+        html.H3('Normalised Gini Index'),
+        html.H6("""An adjusted way to represent ROC-AUC. A perfectly random model 
+                will have a value of 0, the reversing model having a negative sign 
+                and the perfect model having 1."""),
+        html.P(id='bm-model-gini', children='', style={'font-weight': 'bold'}),
+        html.Br(),
+        html.H3('Threshold-Dependent Performance Metrics'),
         html.H6(id='threshold-text', children='Adjust the threshold here: 0.5',
                 style={'font-weight': 'bold'}),
         dcc.Input(id='threshold', type='range', value=0.5, min=0, max=1),
@@ -175,6 +182,13 @@ def re_performance_metric_layout():
                        style={'font-weight': 'bold'})
             ]),
         html.Br(),
+        html.H3('Normalised Gini Index'),
+        html.H6("""An adjusted way to represent ROC-AUC. A perfectly random model 
+                will have a value of 0, the reversing model having a negative sign 
+                and the perfect model having 1."""),
+        html.P(id='re-model-gini', children='', style={'font-weight': 'bold'}),
+        html.Br(),
+        html.H3('Threshold-Dependent Performance Metrics'),
         html.H6(id='threshold-text-re', children='Adjust the threshold here: 0.5',
                 style={'font-weight': 'bold'}),
         dcc.Input(id='threshold-re', type='range', value=0.5, min=0, max=1),

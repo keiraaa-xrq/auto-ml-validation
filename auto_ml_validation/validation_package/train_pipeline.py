@@ -32,12 +32,13 @@ def train(
     try:
         clf = instantiate_clf(algo, params)
     except Exception as e:
-        log_error(logger, f'Unable to instantiate {algo} model with {params}.')
+        log_error(
+            logger, f'Unable to instantiate {algo} model with {params}: {e}')
     # train
     try:
         clf.fit(X_train, y_train)
     except Exception as e:
-        log_error(logger, f'Unable to instantiate {algo} model with {params}.')
+        log_error(logger, f'Unable to train {algo} model: {e}.')
     # optimise threshold
     best_threshold, max_score = clf.optimise_threshold(
         X_val, y_val, metric, verbose=0)
@@ -45,6 +46,6 @@ def train(
     if save:
         clf.save_model(save_path)
     if verbose:
-        msg = f'Completed training {clf.name}; best threshold: {best_threshold}; best {metric}: max_score'
+        msg = f'Completed training {clf.name}; best threshold: {best_threshold}; best {metric}: {max_score}'
         log_info(logger, msg)
     return clf, best_threshold

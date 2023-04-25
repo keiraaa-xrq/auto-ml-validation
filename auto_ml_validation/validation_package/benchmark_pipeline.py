@@ -99,7 +99,8 @@ def instantiate_clfs(n_sample: int) -> List[AbstractBinaryClassifier]:
         clfs = [dt, knn, lg, rf, xgb]
     else:
         clfs = [dt, lg, rf, xgb]
-    return clfs
+    # return clfs
+    return [dt]  # TODO
 
 
 def compare_performance(

@@ -63,18 +63,6 @@ def rep_dataset_layout() -> html.Div:
     Returns:
         html.Div: html element consisting of form input for user
     """
-    # Create the checklist dropdown
-    cat_var_dropdown = dbc.DropdownMenu(
-        label="Select Options",
-        children=[
-            dbc.Checklist(
-                options=[],
-                value=[],
-                id="cat-var-input",
-                inline=True,
-            ),
-        ],
-    )
     return html.Div([
         # New Heading
         html.Div([
@@ -172,16 +160,6 @@ def rep_dataset_layout() -> html.Div:
                 ),
             ], style={'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'gap': '10px'}),
         ]),
-        # Text Fields
-        html.Div([
-            html.P('Please indicate the target variable name:'),
-            dcc.Dropdown(id='target-var-input', value='',
-                         options=[], style={'width': '100%'}),
-            html.P('Please indicate all categorical variables:'),
-            cat_var_dropdown
-        ], style={'textAlign': 'center', 'margin': 'auto', 'maxWidth': '800px', 'paddingTop': '50px'}),
-        dcc.Textarea(id='selected-options', value='', readOnly=True,
-                     style={'margin-top': '20px', 'width': '78%', 'height': '80%'})
     ],
         style=container_style
     )
@@ -192,6 +170,18 @@ def auto_dataset_layout() -> html.Div:
     Returns:
         html.Div: html element consisting of form input for user
     """
+    # Create the checklist dropdown
+    cat_var_dropdown = dbc.DropdownMenu(
+        label="Select Options",
+        children=[
+            dbc.Checklist(
+                options=[],
+                value=[],
+                id="cat-var-input",
+                inline=True,
+            ),
+        ],
+    )
 
     return html.Div([
         html.Div([
@@ -229,9 +219,9 @@ def auto_dataset_layout() -> html.Div:
                 style={'display': 'flex', 'gap': '30px',
                        'alignItems': 'center', 'justifyContent': 'center'}
             ),
-            html.H5('Please upload the processed datasets for auto benchmarking:', style={
+            html.H5('Please upload the datasets for auto benchmarking:', style={
                     'textAlign': 'center', 'margin-top': '30px'}),
-            html.H6('Datasets should be processed and contain only selected features along with the target variable.', style={
+            html.H6('Datasets should be clean and contain all features along with the target variable.', style={
                     'textAlign': 'center', 'color': '#4f4f4f ', 'font-size': '13px'}),
             # Files Upload
             html.H6('Train Dataset', style={'textAlign': 'center'}),
@@ -275,6 +265,16 @@ def auto_dataset_layout() -> html.Div:
                 ),
             ], style={'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'gap': '10px'}),
         ]),
+        # Text Fields
+        html.Div([
+            html.P('Please indicate the target variable name:'),
+            dcc.Dropdown(id='target-var-input', value='',
+                         options=[], style={'width': '100%'}),
+            html.P('Please indicate all categorical variables:'),
+            cat_var_dropdown
+        ], style={'textAlign': 'center', 'margin': 'auto', 'maxWidth': '800px', 'paddingTop': '50px'}),
+        dcc.Textarea(id='selected-options', value='', readOnly=True,
+                     style={'margin-top': '20px', 'width': '78%', 'height': '80%'})
     ],
         style=container_style
     )
